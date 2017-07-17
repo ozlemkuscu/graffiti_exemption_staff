@@ -1,4 +1,9 @@
 const configURL = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js";
+const geoURL = "//map.toronto.ca/geoservices/rest/search/rankedsearch";
+// example
+// "https://map.toronto.ca/geoservices/rest/search/rankedsearch?searchString=55%20john%20street&searchArea=1&matchType=1&projectionType=1&retRowLimit=10"
+const mailSend = false;
+
 const app = new cot_app("Graffiti Exemption", {
   hasFooter: true,
   hasContentBottom: true,
@@ -171,48 +176,6 @@ function listSubmissions(status, filter, repo, target) {
     let args = "";
 
     //initialize new cc_retrieve_view (pass in constructor)
-    /*  if (status == "All") {
-        // build cc_retrieve_view constructor
-        args = {
-          url: config.httpHost.app[httpHost] + config.api.get + repo + '/?json=' + JSON.stringify(json) + '&sid=' + getCookie(cookie_SID),
-          target: $("#" + target),
-          addScroll: true,
-          addFilter: true,
-          defaultSortOrder: "des",
-          addFooter: true,
-          dateFormat: config.dateTimeFormat,
-          columnDefs: [
-            { "targets": 0, data: null, title: '<span class="sr-only">' + app.data["View_Edit"] + '</span>', "defaultContent": `<a class="btn-default btn-view-edit-report"><span title="View/Edit" class="glyphicon glyphicon-pencil"></span></a>` },
-            { "targets": 3, data: function (row, type, val, meta) { return (row.eFirstName + " " + row.eLastName); }, defaultContent: '', title: app.data["Name"] },
-            { "targets": 4, data: 'actionList', "title": app.data["Action List"], defaultContent: '', sortOrder: "des" },
-            { "targets": 5, data: 'ground', "title": app.data["Ground"], defaultContent: 'Other', sortOrder: "des" },
-            { "targets": 6, data: 'typeComplaint', title: app.data["Type of Complaint"], defaultContent: '', sortOrder: "des" },
-            { "targets": 7, data: 'divisionComplaint', "title": app.data["CityDivision"], defaultContent: '', sortOrder: "des" },
-            { "targets": 8, data: 'issue', title: app.data["Issue"], defaultContent: '' },
-            { "targets": 9, data: 'caseManager', "title": app.data["Case Manager"], defaultContent: '', sortOrder: "des" },
-            {
-              "targets": 10, defaultContent: '', title: app.data["AddContactName1"],
-              data: function (row, type, val, meta) {
-                return (row.grid_0_addfirstName == null ? '' : row.grid_0_addfirstName + ' ') + (row.grid_0_addlastName == null ? '' : row.grid_0_addlastName);
-              }
-            },
-            {
-              "targets": 11, defaultContent: '', title: app.data["AddContactName2"],
-              data: function (row, type, val, meta) {
-                return (row.grid_1_addfirstName == null ? '' : row.grid_1_addfirstName + ' ') + (row.grid_1_addlastName == null ? '' : row.grid_1_addlastName);
-              }
-            },
-            {
-              "targets": 12, defaultContent: '', title: app.data["AddContactName3"],
-              data: function (row, type, val, meta) {
-                return (row.grid_2_addfirstName == null ? '' : row.grid_2_addfirstName + ' ') + (row.grid_2_addlastName == null ? '' : row.grid_2_addlastName);
-              }
-            },
-          ]
-        };
-  
-      }
-    } else {*/
     // build cc_retrieve_view constructor
     args = {
       url: config.httpHost.app[httpHost] + config.api.get + repo + '/?json=' + JSON.stringify(json) + '&sid=' + getCookie(cookie_SID),
@@ -222,7 +185,6 @@ function listSubmissions(status, filter, repo, target) {
       defaultSortOrder: "des",
       addFooter: true,
       dateFormat: config.dateFormatView,
-      /////      dateFormat: 'YYYY/MM/DD h:mm a',
       columnDefs: [
         { "targets": 0, data: null, defaultContent: '', title: '<span class="sr-only">' + app.data["View_Edit"] + '</span>', "defaultContent": `<a class="btn-default btn-view-edit-report"><span title="View/Edit" class="glyphicon glyphicon-pencil"></span></a>` },
         { "targets": 1, data: 'lsteStatus', "title": config.recStatus.title, defaultContent: '', sortOrder: "des" },
@@ -241,12 +203,10 @@ function listSubmissions(status, filter, repo, target) {
         { "targets": 6, data: 'eEmail', title: app.data["Email"], defaultContent: '', sortOrder: "des" },
         { "targets": 7, data: 'emAddress', "title": app.data["Graffiti Address"], defaultContent: '', sortOrder: "des" },
         { "targets": 8, data: 'AddressGeoID', title: app.data["Address Geo ID"], defaultContent: '' },
-        { "targets": 9, data: 'epermission', "title": "Permission", defaultContent: '', sortOrder: "des" },
+        { "targets": 9, data: 'ePermission', "title": "Permission", defaultContent: '', sortOrder: "des" },
         { "targets": 10, data: 'eMaintenance', "title": "Maintenance", defaultContent: '', sortOrder: "des" }
       ]
     }
-    // }
-
 
     var myDataTable = new cc_retrieve_view(args);
 
@@ -359,7 +319,7 @@ function newPage(query) {
           });
         }
       }
-      //  $("#viewtitle").html('Submission' + config.timeOutMsg);
+      $("#viewtitle").html('Submission' + config.timeOutMsg);
       loadForm("#new-form", null, null, null, form_id, config.default_repo);
     });
   }
@@ -389,12 +349,11 @@ function viewEditPage(id, query) {
           });
         }
       }
-
       // API call to get report
       $.getJSON(config.httpHost.app[httpHost] + config.api.get + repo + '/' + id + '?sid=' + getCookie(cookie_SID))
         .done(function (data) {
           let payload = JSON.parse(data.payload);
-          $("#viewtitle").html((data.status === 'Yes' ? 'New' : config.status[data.status + 'App']) + ' Submission: ' + payload.eFirstName + " " + payload.eLastName); //  + config.timeOutMsg
+          $("#viewtitle").html((data.status === 'Yes' ? 'New' : config.status[data.status + 'App']) + ' Submission: ' + payload.eFirstName + " " + payload.eLastName)+ config.timeOutMsg;
           loadForm("#viewedit-form", payload, id, data.status, form_id, config.default_repo, data, docMode);
         })
         .fail(function (textStatus, error) {

@@ -136,24 +136,26 @@ callback({
                     'post': '/cc_sr_admin_v1/submit/',
                     'put': '/cc_sr_admin_v1/submit/eventrepo/',
                     'delete': '/cc_sr_admin_v1/submit/eventrepo/',
-                    'email': '/cc_sr_admin_v1/submit/csu_email',
+                    'email': '/cc_sr_admin_v1/submit/graffiti_exemption_email',
                     'eventDispatcher': '/rest/COTEventDispatcher_V2/REST',
                     'upload': '/cc_sr_admin_v1/upload/',
                     'session': '/cc_sr_admin_v1/session/',
-                    'timeout': 30
+                    'timeout': 60
                 },
                 'api_public': {
                     'post': '/cc_sr_v1/submit/',
-                    'upload': '/cc_sr_v1/upload/'
+                    'upload': '/cc_sr_v1/upload/',
+                    'email': '/cc_sr_v1/submit/graffiti_exemption_email'
                 },
                 'members': {
                     'app_g': 'G',
                     'app_admin': 'testweb1,MLS_user,MLS_admin,okuscu,bkiri'
                 },
-                'admin': {
-                    'Ozlem Kuscu': 'ozlem.kuscu@toronto.ca'
+                'admin_emails': {
+                    'Ozlem Kuscu Yahoo': 'ozlemkuscu@yahoo.ca',
+                    'Ozlem Kuscu Gmail': 'ozkuscu@gmail.com'
                 },
-                'captain': {
+                'captain_emails': {
                     'Ozlem Kuscu': 'ozlem.kuscu@toronto.ca'
                 },
                 'recStatus': {
@@ -177,7 +179,10 @@ callback({
                     },
                     'notify': {
                         'done': 'Notified! This report was successfully sent to the Emergency Management Captain.',
-                        'fail': 'Unable to notify! This report could not be sent to the Emergency Management Captain. Please try again.'
+                        'fail': 'Unable to notify! This report could not be sent to the Emergency Management Captain. Please try again.',
+                        'emailFrom': 'wmDev@toronto.ca',
+                        'emailSubject': 'New Graffiti Exemption Document',
+                        'emailBody': 'New Graffiti Bylaw regularisation application has been received.'
                     },
                     'submit': {
                         'done': 'Thank you! Your request has been received.',
@@ -266,6 +271,10 @@ callback({
             }
         },
         {
+            "summary": "Same As Above",
+            "title": "Same As Above"
+        },
+        {
             "summary": "Please upload minimum one image.",
             "title": "imageValidation"
         },
@@ -282,6 +291,9 @@ callback({
         {
             "summary": "Request for Regularization for Art Mural/Graffiti Art under Municipal Code Chapter 485, Graffiti",
             "title": "Form Title"
+        }, {
+            "summary": "Admin Section",
+            "title": "Admin Section"
         }, {
             "summary": "Contact Person",
             "title": "Contact Details Section"
@@ -316,7 +328,7 @@ callback({
             "summary": "Fax",
             "title": "Fax"
         }, {
-            "summary": "Business Email",
+            "summary": "Email",
             "title": "Email"
         }, {
             "summary": "Descriptive Location",
@@ -325,7 +337,7 @@ callback({
             "summary": "Mural/Graffiti Location",
             "title": "Graffiti Section"
         }, {
-            "summary": "Address",
+            "summary": "Art Address",
             "title": "Graffiti Address"
         }, {
             "summary": "City",
@@ -349,32 +361,50 @@ callback({
             "summary": "Have you provided permission for this art mural/graffiti art installation?",
             "title": "permission"
         }, {
+            "summary": "Permission information is required",
+            "title": "permissionValidation"
+        }, {
             "summary": "Have you received a Notice of Violation?",
             "title": "notice"
+        }, {
+            "summary": "Notice of Violation information is required",
+            "title": "noticeValidation"
         }, {
             "summary": "When must your property be brought into compliance with the Bylaw?",
             "title": "compliance"
         }, {
-            "summary": "Compliance Date",
+            "summary": "Compliance Date information is required",
             "title": "complianceValidation"
         }, {
             "summary": "Do you have a maintenance agreement with the artist?",
             "title": "maintenance"
         }, {
+            "summary": "Maintenance agreement information is required",
+            "title": "maintenanceValidation"
+        }, {
             "summary": "If Yes, please provide details of your agreement:",
             "title": "agreementDetails"
         }, {
-            "summary": "Agreement Detail",
+            "summary": "Agreement Detail information is required",
             "title": "agreementDetailsValidation"
         }, {
             "summary": "Please provide information on the artist responsible for the art mural/graffiti art on your property.",
             "title": "artistDetails"
         }, {
+            "summary": "Artist information information is required",
+            "title": "artistDetailsValidation"
+        }, {
             "summary": "How does this art mural/graffiti art enhance the surface it covers?",
             "title": "enhance"
         }, {
+            "summary": "Art mural/graffiti art enhance the surface information is required",
+            "title": "enhanceValidation"
+        }, {
             "summary": "How does this art mural/graffiti art adhere to the local community character and standards?",
             "title": "adhere"
+        }, {
+            "summary": "Art mural/graffiti art adhere to the local community character and standards information is required",
+            "title": "adhereValidation"
         }, {
             "summary": "Additional Comments",
             "title": "comments"
@@ -391,7 +421,7 @@ callback({
             "summary": "Documents",
             "title": "Documents"
         }, {
-            "summary": "<strong>Images </strong>Limit of max three (3) images.",
+            "summary": "<strong>Images </strong>Limit of max three (3) images. Minimum one (1) image is required.",
             "title": "ImagesText"
         }, {
             "summary": "<strong>Documents </strong>Limit of max three (3) documents.",
@@ -403,11 +433,17 @@ callback({
             "summary": "STAFF AREA",
             "title": "Staff Area Footer"
         }, {
-            "summary": "graffiti_exemptions_submissions",
+            "summary": "streeart_submissions",
             "title": "Excel File Name"
         }, {
-            "summary": "Address Geo ID",
+            "summary": "Geo ID",
             "title": "Address Geo ID"
+        }, {
+            "summary": "Address Longitude",
+            "title": "Address Longitude"
+        }, {
+            "summary": "Latitude",
+            "title": "Latitude"
         }, {
             "summary": "Test Map Link",
             "title": "Map Address"

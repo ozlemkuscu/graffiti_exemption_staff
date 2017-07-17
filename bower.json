@@ -12,7 +12,7 @@
     "crossroads.js": "crossroads#^0.12.2",
     "jquery.populate.js": "jquery.populate#^0.5.0",
     "hasher.js": "hasher#^1.2.0",
-    "jquery.serializejson.js": "jquery.serializeJSON#^2.7.2",
+   // "jquery.serializejson.js": "jquery.serializeJSON#^2.7.2",
     "datatables.net": "datatables.net#^1.10.15",
     "datatables.net-bs": "datatables.net-dt#^3.1.2",
     "datatables.net-buttons": "datatables.net-buttons#^1.2.4",

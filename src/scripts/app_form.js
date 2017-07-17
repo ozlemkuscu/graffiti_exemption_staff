@@ -4,13 +4,14 @@
 let imageDropzone = void 0;
 let docDropzone = void 0;
 let form;
-let cookie_SID = 'graffiti_exemption.sid';
-let cookie_modifiedUsername = 'graffiti_exemption.cot_uname';
-let cookie_modifiedFirstName = 'graffiti_exemption.firstName';
-let cookie_modifiedLastName = 'graffiti_exemption.lastName';
-let cookie_modifiedEmail = 'graffiti_exemption.email';
+let appParam = 'graffiti_exemption';
 
-//let sessionStatus = false;
+let cookie_SID = appParam+'.sid';
+let cookie_modifiedUsername = appParam+'.cot_uname';
+let cookie_modifiedFirstName = appParam+'.firstName';
+let cookie_modifiedLastName = appParam+'.lastName';
+let cookie_modifiedEmail = appParam+'.email';
+let repo = appParam;
 
 function checkFileUploads(payload) {
   let queryString = "";
@@ -71,7 +72,9 @@ function saveReport(action, payload, msg, form_id, repo) {
       case 'notify':
         if (data && data.EventMessageResponse && data.EventMessageResponse.Event && data.EventMessageResponse.Event.EventID) {
           // Email report notice to emergency management captain and incident manager/reporters
-          emailNotice(data.EventMessageResponse.Event.EventID, action, ['captain']);
+          if (mailSend) {
+            emailNotice(data.EventMessageResponse.Event.EventID, action);
+          }
         } else {
           hasher.setHash('new?alert=danger&msg=' + msg.fail + '&ts=' + new Date().getTime());
         }
@@ -114,16 +117,17 @@ function updateReport(fid, action, payload, msg, repo, formData) {
     },
     dataType: 'json'
   }).done(function (data) {
-    action = 'notify';
+    //  action = 'notify';
     switch (action) {
       case 'save':
         hasher.setHash(fid + '?alert=success&msg=' + msg.done + '&ts=' + new Date().getTime());
+        if (mailSend) { emailNotice(fid, action); }
         break;
       case 'updateAttachments':
         break;
       case 'notify':
         // Email report notice to emergency management captain and incident manager/reporters
-        emailNotice(fid, action, ['captain']);
+        if (mailSend) { emailNotice(fid, action); }
         break;
 
       case 'submit':
@@ -144,17 +148,15 @@ function updateReport(fid, action, payload, msg, repo, formData) {
     $(".btn").removeAttr('disabled').removeClass('disabled');
   });
 }
-function emailNotice(fid, action, recipients) {
-  let emailTo ={};
-
-  let emailCaptain = config.captain; //'Ozlem Kuscu':'ozlem.kuscu@toronto.ca'
-  let emailAdmin = config.admin;
+function emailNotice(fid, action) {
+  let emailTo = {};
+  let emailCaptain = config.captain_emails;
+  let emailAdmin = config.admin_emails;
   if (typeof emailCaptain !== 'undefined' && emailCaptain != "") {
     $.extend(emailTo, emailCaptain);
   }
-
   if (typeof emailAdmin !== 'undefined' && emailAdmin != "") {
-    $.extend(emailTo, emailAdmin);
+    //  $.extend(emailTo, emailAdmin);
   }
 
   var emailRecipients = $.map(emailTo, function (email) {
@@ -163,21 +165,17 @@ function emailNotice(fid, action, recipients) {
     return i === a.indexOf(itm);
   }).join(',');
 
-  /*var payload = JSON.stringify({
-    'email': 'ozlem.kuscu@toronto.ca',//emailRecipients,
-    'id': fid,
-    'status': action,
-    'home': 'temp'
-  });*/
   var payload = JSON.stringify({
-    'email': emailRecipients,
+    'emailTo': emailRecipients,
+    'emailFrom': (config.messages.notify.emailFrom ? config.messages.notify.emailFrom : 'wmDev@toronto.ca'),
     'id': fid,
     'status': action,
-    'home': 'temp'
+    'body': (config.messages.notify.emailBody ? config.messages.notify.emailBody : 'New submission has been received.'),
+    'emailSubject': config.messages.notify.emailSubject
   });
 
   $.ajax({
-    url: '/cc_sr_admin_v1/submit/graffiti_exemption_email', //config.api.email,
+    url: config.httpHost.app[httpHost] + config.api.email,
     type: 'POST',
     data: payload,
     headers: {
@@ -186,20 +184,16 @@ function emailNotice(fid, action, recipients) {
     },
     dataType: 'json'
   }).done(function (data, textStatus, jqXHR) {
-    console.log("Email notification sent");
-
     if (action === 'notify') {
       hasher.setHash(fid + '?alert=success&msg=notify.done&ts=' + new Date().getTime());
     }
   }).fail(function (jqXHR, textStatus, error) {
     console.log("POST Request Failed: " + textStatus + ", " + error);
-
     if (action === 'notify') {
       hasher.setHash(fid + '?alert=danger&msg=notify.fail&ts=' + new Date().getTime());
     }
   });
 }
-
 function emailNoticeOriginal(fid, action, recipients) {
   let emailTo;
   if ($("#modifiedEmail").val()) {
@@ -286,8 +280,10 @@ function processForm(action, form_id, repo) {
   let fid = $("#fid").val();
   let msg, payload;
   //  let f_data = getFormJSON(form_id);
-  let f_data = form.getData();
 
+  setGeoParams();
+
+  let f_data = form.getData();
   f_data.image_uploads = processUploads(imageDropzone, repo, true);
   f_data.doc_uploads = processUploads(docDropzone, repo, true);
 
@@ -400,8 +396,7 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
   let debugMode = false;
 
   //$(destinationSelector).empty();
-  //  let sections = $.merge($.merge(getAdminSectionsTop(), getSubmissionSections()), getAdminSectionsBottom());
-  let sections = $.merge(getAdminSectionsTop(), $.merge(getSubmissionSections(), getAdminSectionsBottom()));
+  let sections = $.merge(getAdminSectionsTop(), getSubmissionSections());
 
   //  form = new CotForm({
   form = new CotForm({
@@ -503,6 +498,7 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
     $(".dz-remove").hide();
     $(".save-action").hide();
     $("#savebtn").hide();
+    $("#setbtn").hide();
   } else {
     $(".edit-action").hide();
   }
@@ -550,6 +546,7 @@ function initForm(data) {
     $(".edit-action").hide();
     $(".save-action").show();
     $("#savebtn").show();
+    $("#setbtn").show();
     docMode = "";
   });
 
@@ -570,22 +567,14 @@ function initForm(data) {
 
   });
 
-  $('#eNotice').on('change', function () {
-    //  if(this.value == config.status.ApprovedHRC){
-    $('#' + form_id).formValidation('revalidateField', $('#ComplianceDate'));
-    //  }
-  });
-
-  $('#eMaintenance').on('change', function () {
-    //  if(this.value == config.status.ApprovedHRC){
-    $('#' + form_id).formValidation('revalidateField', $('#eMaintenanceAgreement'));
-    //  }
-  });
+  $("#geobtn").click(function () { setGeoParams(); });
+  $("#emailbtn").click(function () { emailNotice("1234567", "save"); });
+  $('#eNotice').on('change', function () { $('#' + form_id).formValidation('revalidateField', $('#ComplianceDate')); });
+  $('#eMaintenance').on('change', function () { $('#' + form_id).formValidation('revalidateField', $('#eMaintenanceAgreement')); });
 
   if (data) {
     // HIDE/SHOW FIELDS BASED ON OTHER FIELD VALUES
   } else {
-
     var dataCreated = new Date();
     dataCreated = moment(dataCreated).format(config.dateTimeFormat);
     $("#recCreated").val(dataCreated);
@@ -612,18 +601,27 @@ function getSubmissionSections() {
       rows: [
         {
           fields: [
-            //"required": true,
-            { "id": "eFirstName", "title": app.data["First Name"], "required": true, "className": "col-xs-12 col-md-6" },
-            { "id": "eLastName", "title": app.data["Last Name"], "required": true, "className": "col-xs-12 col-md-6" },
-            { "id": "eAddress", "title": app.data["Address"], "required": true, "className": "col-xs-12 col-md-6" },
+            {
+              "id": "eFirstName", "title": app.data["First Name"], "className": "col-xs-12 col-md-6",
+              "required": true
+            },
+            {
+              "id": "eLastName", "title": app.data["Last Name"], "className": "col-xs-12 col-md-6",
+              "required": true
+            },
+            {
+              "id": "eAddress", "title": app.data["Address"], "className": "col-xs-12 col-md-6",
+              //  "required": true
+
+            },
             { "id": "eCity", "title": app.data["City"], "value": "Toronto", "className": "col-xs-12 col-md-6" }
           ]
-        }, {
+        },
+        {
           fields: [{ "id": "ePostalCode", "title": app.data["Postal Code"], "className": "col-xs-12 col-md-6" },
           {
-            "id": "ePrimaryPhone", "title": app.data["Phone"],
-            //  "required": true,
-            "validationtype": "Phone", "className": "col-xs-12 col-md-6"
+            "id": "ePrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6",
+            //  "required": true
           },
           { "id": "eFax", "title": app.data["Fax"], "validationtype": "Phone", "className": "col-xs-12 col-md-6" },
           { "id": "eEmail", "title": app.data["Email"], "validationtype": "Email", "validators": { regexp: { regexp: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/, message: 'This field must be a valid email. (###@###.####)' } }, "className": "col-xs-12 col-md-6" }
@@ -639,28 +637,44 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              "id": "sameAsAbove",
+              "id": "emSameAddress",
               "title": "",
-              "type": "",
-              "choices": config.sameAsAbove.choices,
-              "class": "col-xs-12 col-md-12",
-              "value": "Same As Above",
-              "aria-label": "Click here to set same address values for graffiti location"
-            },
-            { "id": "emAddress", "title": app.data["Graffiti Address"], "required": true, "className": "col-xs-12 col-md-6" },
-            { "id": "emCity", "title": app.data["Graffiti City"], "className": "col-xs-12 col-md-6" }
+              //  "type": "checkbox",
+              //  "choices": config.sameAsAbove.choices,
+              type: "html",
+              html: `<div className="col-xs-12 col-md-12"><button class="btn btn-info" id="setbtn"><span class="" aria-hidden="true"></span> ` + app.data["Same As Above"] + `</button></div>`
+              //  "class": "col-xs-12 col-md-12"
+              /*
+              // for testing purposes
+              <button class="btn btn-info" id="geobtn"><span class="" aria-hidden="true"></span> ` + "Set Geo Values" + `</button>
+              <button class="btn btn-info" id="emailbtn"><span class="" aria-hidden="true"></span> ` + "Send Email" + `</button>
+              */
+            }
           ]
         },
         {
           fields: [
-            { "id": "emPostalCode", "title": app.data["Graffiti Postal Code"], "className": "col-xs-12 col-md-6" },
             {
-              "id": "emFacingStreet", "title": app.data["Facing Street"],
-              //  "required": true,
+              "id": "emAddress", "title": app.data["Address"],
+              //  "required": true, 
               "className": "col-xs-12 col-md-6"
             },
-            { "id": "emFacingStreet", "title": app.data["Facing Street"], "className": "col-xs-12 col-md-6" },
-            { "id": "emDescriptiveLocation", "prehelptext": app.data["DescriptiveLocationText"], "title": app.data["graffitiDesLocation"], "required": true, "className": "col-xs-12 col-md-6" }
+            { "id": "emCity", "title": app.data["City"], "value": "Toronto", "className": "col-xs-12 col-md-6" }
+          ]
+        },
+        {
+          fields: [{ "id": "emPostalCode", "title": app.data["Postal Code"], "className": "col-xs-12 col-md-6" },
+          { "id": "emPrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6" },
+          {
+            "id": "emFacingStreet", "title": app.data["Facing Street"],
+            //  "required": true, 
+            "className": "col-xs-12 col-md-6"
+          },
+          {
+            "id": "emDescriptiveLocation", "posthelptext": app.data["DescriptiveLocationText"], "title": app.data["graffitiDesLocation"],
+            "required": true,
+            "className": "col-xs-12 col-md-6"
+          }
           ]
         }
       ]
@@ -673,85 +687,102 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              "id": "ePermission",
-              "title": app.data["permission"],
-              //    "required": true,
-              "type": "radio",
-              "className": "col-xs-12 col-md-12",
-              "choices": config.choices.yesNoFull,
-              "orientation": "horizontal"
-            },
-            {
-              "id": "eNotice",
-              "title": app.data["notice"],
-              //  "required": true,
-              //  "type": "radio",
-              "type": "dropdown",
-              "value": "No",
-              "className": "col-xs-12 col-md-12",
-              "choices": config.choices.yesNoFull,
-              "orientation": "horizontal"
-            }
-            ,
-            {
-              "id": "ComplianceDate",
-              "title": app.data["compliance"],
-              //    "required": true,
-              "type": "datetimepicker",
-              "placeholder": config.dateFormat,
-              "className": "col-xs-12 col-md-6",
-              "options": { format: config.dateFormat },
+              "id": "ePermission", "title": app.data["permission"], "type": "radio", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
               "validators": {
                 callback: {
-                  message: app.data["compliance"] + ' is required',
+                  message: app.data["permissionValidation"],
+                  callback: function (value, validator, $field) {
+                    return ($field[0].checked);
+                  }
+                }
+              }
+            }]
+        },
+        {
+          fields: [
+            {
+              "id": "eNotice", "title": app.data["notice"], "type": "dropdown", "value": "No", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              //  "required": true,
+              "validators": {
+                callback: {
+                  message: app.data["noticeValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
+            }, {
+              "id": "ComplianceDate", "title": app.data["compliance"], "type": "datetimepicker", "placeholder": config.dateFormat, "className": "col-xs-12 col-md-6", "options": { format: config.dateFormat },
+              "validators": {
+                callback: {
+                  message: app.data["complianceValidation"],
                   // this is added to formValidation
                   callback: function (value, validator, $field) {
                     var checkVal = $("#eNotice").val();
-                    return (checkVal !== "Yes") ? true : (value !== '');
+                    return ((checkVal !== "Yes") ? true : (value !== ''));
+                  }
+                }
+              }
+            }, {
+              "id": "eMaintenance", "title": app.data["maintenance"], "type": "dropdown", "value": "No", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              //  "type": "radio",
+              "validators": {
+                callback: {
+                  message: app.data["maintenanceValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
                   }
                 }
               }
             },
             {
-              "id": "eMaintenance",
-              "title": app.data["maintenance"],
-              //  "required": true,
-              //  "type": "radio",
-              "type": "dropdown",
-              "value": "No",
-              "className": "col-xs-12 col-md-12",
-              "choices": config.choices.yesNoFull,
-              "orientation": "horizontal"
-            },
-            {
-              "id": "eMaintenanceAgreement", "title": app.data["agreementDetails"],
-              //  "required": true,
-              "className": "col-xs-12 col-md-12",
+              "id": "eMaintenanceAgreement", "title": app.data["agreementDetails"], "className": "col-xs-12 col-md-12",
               "validators": {
                 callback: {
-                  message: app.data["agreementDetails"] + ' is required',
+                  message: app.data["agreementDetailsValidation"],
                   // this is added to formValidation
                   callback: function (value, validator, $field) {
                     var checkVal = $("#eMaintenance").val();
-                    return (checkVal !== "Yes") ? true : (value !== '');
+                    return ((checkVal !== "Yes") ? true : (value !== ''));
                   }
                 }
               }
             },
             {
-              "id": "eArtistInfo", "title": app.data["artistDetails"],
-              //  "required": true,
-              "className": "col-xs-12 col-md-12"
+              "id": "eArtistInfo", "title": app.data["artistDetails"], "className": "col-xs-12 col-md-12",
+              //  "required":true,
+              "validators": {
+                callback: {
+                  message: app.data["artistDetailsValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
             },
             {
-              "id": "eArtSurfaceEnhance", "title": app.data["enhance"],
-              //  "required": true,
-              "className": "col-xs-12 col-md-12"
+              "id": "eArtSurfaceEnhance", "title": app.data["enhance"], "className": "col-xs-12 col-md-12",
+              //  "required":true,
+              "validators": {
+                callback: {
+                  message: app.data["enhanceValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
             },
             {
-              "id": "eArtLocalCharacter", "title": app.data["adhere"],
-              "required": true,
-              "className": "col-xs-12 col-md-12"
+              "id": "eArtLocalCharacter", "title": app.data["adhere"], "className": "col-xs-12 col-md-12",
+              //  "required":true,
+              "validators": {
+                callback: {
+                  message: app.data["adhereValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
             },
             { "id": "eAdditionalComments", "title": app.data["comments"], "className": "col-xs-12 col-md-12" },
           ]
@@ -765,16 +796,20 @@ function getSubmissionSections() {
         {
           fields: [
             { "id": "AttachmentText", "title": "", "type": "html", "html": app.data["AttachmentText"], "className": "col-xs-12 col-md-12" },
-            { "id": "Images", "prehelptext": app.data["ImagesText"], "title": app.data["Images"], "type": "html", "aria-label": "Dropzone File Upload Control Field for Images", "html": '<section aria-label="File Upload Control Field for Images" id="attachment"> <div class="dropzone" id="image_dropzone" aria-label="Dropzone File Upload Control for Images Section"></div></section><section id="image_uploads"></section>', "className": "col-xs-12 col-md-12" },
-            { "id": "Documents", "prehelptext": app.data["DocumentsText"], "title": app.data["Documents"], "type": "html", "aria-label": "Dropzone File Upload Control Field for Documents", "html": '<section aria-label="File Upload Control Field for Documents" id="attachment"> <div class="dropzone" id="document_dropzone" aria-label="Dropzone File Upload Control for Document Section"></div></section><section id="doc_uploads"></section>', "className": "col-xs-12 col-md-12" },
+            {
+              "id": "Images", "prehelptext": app.data["ImagesText"], "title": app.data["Images"], "type": "html", "aria-label": "Dropzone File Upload Control Field for Images",
+              "html": '<section aria-label="File Upload Control Field for Images" id="attachment"><div class="dropzone" id="image_dropzone" aria-label="Dropzone File Upload Control for Images Section"></div></section><input type="hidden" name="txtPicName" id="txtPicName" value="" /><section id="image_uploads"></section>', "className": "col-xs-12 col-md-12"
+            },
+            {
+              "id": "Documents", "prehelptext": app.data["DocumentsText"], "title": app.data["Documents"], "type": "html", "aria-label": "Dropzone File Upload Control Field for Documents",
+              "html": '<section aria-label="File Upload Control Field for Documents" id="attachment"><div class="dropzone" id="document_dropzone" aria-label="Dropzone File Upload Control for Document Section"></div></section><section id="doc_uploads"></section>', "className": "col-xs-12 col-md-12"
+            },
             { "id": "DeclarationText", "title": "", "type": "html", "html": app.data["DeclarationText"], "className": "col-xs-12 col-md-12" },
             {
               id: "actionBar",
               type: "html",
               html: `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtn"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button>
-                 </div>`
-              //<button class="btn btn-success" id="closebtn"><span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>Close</button>
-              //<button class="btn btn-success" id="printbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print</button>
+                 <button class="btn btn-success" id="printbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print</button></div>`
             },
             {
               id: "successFailRow",
@@ -782,42 +817,6 @@ function getSubmissionSections() {
               className: "col-xs-12 col-md-12",
               html: `<div id="successFailArea" className="col-xs-12 col-md-12"></div>`
             },
-          ]
-        }
-      ]
-    }
-  ]
-  return section;
-}
-function getAdminSectionsTop() {
-  var section = [{
-    rows: [{
-      fields: [
-        {
-          "id": "lsteStatus",
-          "title": config.recStatus.title,
-          "type": "dropdown",
-          "choices": config.recStatus.choices,
-          "class": "col-xs-12 col-md-6"
-        },
-        { "id": "AddressGeoID", "title": app.data["Address Geo ID"], "className": "col-xs-12 col-md-6" },
-        { "id": "MapAddress", "title": app.data["Map Address"], "className": "col-xs-12 col-md-6" },
-        { "id": "ShowMap", "title": app.data["ShowMap"], "className": "col-xs-12 col-md-6" }
-
-      ]
-    }]
-  }];
-  return section;
-}
-function getAdminSectionsBottom() {
-  var section = [
-    {
-      id: "hiddenSec",
-      title: "",
-      className: "panel-info",
-      rows: [
-        {
-          fields: [
             {
               "id": "fid",
               "type": "html",
@@ -838,14 +837,111 @@ function getAdminSectionsBottom() {
               "type": "html",
               "html": "<input type=\"text\" id=\"recCreated\" aria-label=\"Record Creation Date\" aria-hidden=\"true\" name=\"recCreated\">",
               "class": "hidden"
-            }]
+            },
+            {
+              "id": "AddressGeoID",
+              "title": app.data["Address Geo ID"],
+              "type": "html",
+              "html": "<input type=\"hidden\" aria-label=\"Address GeoID\" aria-hidden=\"true\" id=\"AddressGeoID\" name=\"AddressGeoID\">",
+              "class": "hidden"
+            },
+            {
+              "id": "AddressLongitude",
+              "title": app.data["Address Longitude"],
+              "type": "html",
+              "html": "<input type=\"hidden\" aria-label=\"Address Longitude\" aria-hidden=\"true\" id=\"AddressLongitude\" name=\"AddressLongitude\">",
+              "class": "hidden"
+            }, {
+              "id": "AddressLatitude",
+              "title": app.data["Address Latitude"],
+              "type": "html",
+              "html": "<input type=\"hidden\" aria-label=\"Address Latitude\" aria-hidden=\"true\" id=\"AddressLatitude\" name=\"AddressLatitude\">",
+              "class": "hidden"
+            },
+            {
+              "id": "MapAddress",
+              "title": app.data["Map Address"],
+              "type": "html",
+              "html": "<input type=\"hidden\" aria-label=\"MapAddress\" aria-hidden=\"true\" id=\"MapAddress\" name=\"MapAddress\">",
+              "class": "hidden"
+            },
+            {
+              "id": "ShowMap",
+              "title": app.data["ShowMap"],
+              "type": "html",
+              "html": "<input type=\"hidden\" aria-label=\"ShowMap\" aria-hidden=\"true\" id=\"ShowMap\" name=\"ShowMap\">",
+              "class": "hidden"
+            }
+
+          ]
         }
       ]
-    }
+    },
   ]
   return section;
 }
-
+function getAdminSectionsTop() {
+  var section = [{
+    id: "adminSec",
+    title: app.data["Admin Section"],
+    className: "panel-info",
+    rows: [{
+      fields: [
+        {
+          "id": "lsteStatus",
+          "title": config.recStatus.title,
+          "required": true,
+          "type": "radio",
+          "orientation": "horizontal",
+          "choices": config.recStatus.choices,
+          "class": "col-xs-12 col-md-6"
+        }
+      ]
+    }]
+  }];
+  return section;
+}
+function getAdminSectionsBottom() {
+  var section = [
+    {
+      id: "hiddenSec",
+      title: "",
+      className: "panel-info",
+      rows: [{ fields: [] }]
+    }]
+  return section;
+}
+function setGeoParams() {
+  let queryStr = encodeURIComponent($("#emAddress").val() + " " + $("#emCity").val() + " " + $("#emPostalCode").val());
+  queryStr = "?searchString=" + queryStr + "&searchArea=1&matchType=1&projectionType=1&retRowLimit=10";
+  //setGeoParams
+  $.ajax({
+    url: geoURL + queryStr, // geoURL,
+    type: "GET",
+    cache: "true",
+    dataType: "json",
+    async: false,
+    success: function (data) {
+      let resultLoc = data.result.bestResult;
+      if (resultLoc.length > 0) {
+        $("#AddressGeoID").val(resultLoc[0]["geoId"]);
+        $("#AddressLongitude").val(resultLoc[0]["longitude"]);
+        $("#AddressLatitude").val(resultLoc[0]["latitude"]);
+      } else {
+        $("#AddressGeoID").val("");
+        $("#AddressLongitude").val("");
+        $("#AddressLatitude").val("");
+      }
+      //  console.log(resultLoc.length > 0 ? resultLoc[0]["geoId"] : "");
+    },
+    error: function () {
+      //  alert("Error: The application was unable to load data.")
+      $("#AddressGeoID").val("");
+      $("#AddressLongitude").val("");
+      $("#AddressLatitude").val("");
+    }
+  })
+}
 CotForm.prototype.setData = function (data) {
   // STANDARD FIELD OPERATION
   function standardFieldOp(field, val) {
