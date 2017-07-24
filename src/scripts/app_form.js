@@ -6,11 +6,11 @@ let docDropzone = void 0;
 let form;
 let appParam = 'graffiti_exemption';
 
-let cookie_SID = appParam+'.sid';
-let cookie_modifiedUsername = appParam+'.cot_uname';
-let cookie_modifiedFirstName = appParam+'.firstName';
-let cookie_modifiedLastName = appParam+'.lastName';
-let cookie_modifiedEmail = appParam+'.email';
+let cookie_SID = appParam + '.sid';
+let cookie_modifiedUsername = appParam + '.cot_uname';
+let cookie_modifiedFirstName = appParam + '.firstName';
+let cookie_modifiedLastName = appParam + '.lastName';
+let cookie_modifiedEmail = appParam + '.email';
 let repo = appParam;
 
 function checkFileUploads(payload) {
@@ -18,29 +18,17 @@ function checkFileUploads(payload) {
   let binLoc = "";
   if (payload.image_uploads[0]) {
     $.each(payload.image_uploads, function (index, item) {
-      if (binLoc == "") {
-        binLoc = item.bin_id;
-      } else {
-        binLoc = binLoc + "," + item.bin_id;
-      }
+      (binLoc == "") ? binLoc = item.bin_id : binLoc = binLoc + "," + item.bin_id;
     })
-    queryString = "&KeepFiles=" + binLoc;
   }
-
   if (payload.doc_uploads[0]) {
     $.each(payload.doc_uploads, function (index, item) {
-      if (binLoc == "") {
-        binLoc = item.bin_id;
-      } else {
-        binLoc = binLoc + "," + item.bin_id;
-      }
+      (binLoc == "") ? binLoc = item.bin_id : binLoc = binLoc + "," + item.bin_id;
     })
   }
-
-  if (binLoc != "") {
+  if (binLoc !== "") {
     queryString = "&KeepFiles=" + binLoc;
   }
-
   return queryString;
 }
 function saveReport(action, payload, msg, form_id, repo) {
@@ -189,58 +177,6 @@ function emailNotice(fid, action) {
     }
   }).fail(function (jqXHR, textStatus, error) {
     console.log("POST Request Failed: " + textStatus + ", " + error);
-    if (action === 'notify') {
-      hasher.setHash(fid + '?alert=danger&msg=notify.fail&ts=' + new Date().getTime());
-    }
-  });
-}
-function emailNoticeOriginal(fid, action, recipients) {
-  let emailTo;
-  if ($("#modifiedEmail").val()) {
-    emailTo = JSON.parse($("#modifiedEmail").val());
-  } else {
-    emailTo = {};
-  }
-  let emailAdmin = config.administrator['G'];
-  let emailCaptain = config.captain['G'];
-
-  if (recipients && recipients.indexOf('administrator') !== -1) {
-    $.extend(emailTo, emailAdmin);
-  }
-  if (recipients && recipients.indexOf('captain') !== -1) {
-    $.extend(emailTo, emailCaptain);
-  }
-
-  let emailRecipients = $.map(emailTo, function (email) {
-    return email;
-  }).filter(function (itm, i, a) {
-    return i === a.indexOf(itm);
-  }).join(',');
-
-  let payload = JSON.stringify({
-    'email': emailRecipients,
-    'id': fid,
-    'status': action,
-    'home': 'G'
-  });
-
-  $.ajax({
-    url: config.httpHost.app[httpHost] + config.api.email,
-    type: 'POST',
-    data: payload,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8;',
-      'Cache-Control': 'no-cache'
-    },
-    dataType: 'json'
-  }).done(function () {
-
-    if (action === 'notify') {
-      hasher.setHash(fid + '?alert=success&msg=notify.done&ts=' + new Date().getTime());
-    }
-  }).fail(function (textStatus, error) {
-    alert("POST Request Failed: " + textStatus + ", " + error);
-
     if (action === 'notify') {
       hasher.setHash(fid + '?alert=danger&msg=notify.fail&ts=' + new Date().getTime());
     }
@@ -601,18 +537,11 @@ function getSubmissionSections() {
       rows: [
         {
           fields: [
-            {
-              "id": "eFirstName", "title": app.data["First Name"], "className": "col-xs-12 col-md-6",
-              "required": true
-            },
-            {
-              "id": "eLastName", "title": app.data["Last Name"], "className": "col-xs-12 col-md-6",
-              "required": true
-            },
+            { "id": "eFirstName", "title": app.data["First Name"], "className": "col-xs-12 col-md-6", "required": true },
+            { "id": "eLastName", "title": app.data["Last Name"], "className": "col-xs-12 col-md-6", "required": true },
             {
               "id": "eAddress", "title": app.data["Address"], "className": "col-xs-12 col-md-6",
               //  "required": true
-
             },
             { "id": "eCity", "title": app.data["City"], "value": "Toronto", "className": "col-xs-12 col-md-6" }
           ]
@@ -620,7 +549,7 @@ function getSubmissionSections() {
         {
           fields: [{ "id": "ePostalCode", "title": app.data["Postal Code"], "className": "col-xs-12 col-md-6" },
           {
-            "id": "ePrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6",
+            "id": "ePrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6"
             //  "required": true
           },
           { "id": "eFax", "title": app.data["Fax"], "validationtype": "Phone", "className": "col-xs-12 col-md-6" },
@@ -637,27 +566,16 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              "id": "emSameAddress",
-              "title": "",
-              //  "type": "checkbox",
-              //  "choices": config.sameAsAbove.choices,
-              type: "html",
+              "id": "emSameAddress", "title": "", type: "html",
               html: `<div className="col-xs-12 col-md-12"><button class="btn btn-info" id="setbtn"><span class="" aria-hidden="true"></span> ` + app.data["Same As Above"] + `</button></div>`
-              //  "class": "col-xs-12 col-md-12"
-              /*
-              // for testing purposes
-              <button class="btn btn-info" id="geobtn"><span class="" aria-hidden="true"></span> ` + "Set Geo Values" + `</button>
-              <button class="btn btn-info" id="emailbtn"><span class="" aria-hidden="true"></span> ` + "Send Email" + `</button>
-              */
             }
           ]
         },
         {
           fields: [
             {
-              "id": "emAddress", "title": app.data["Address"],
-              //  "required": true, 
-              "className": "col-xs-12 col-md-6"
+              "id": "emAddress", "title": app.data["Address"], "className": "col-xs-12 col-md-6"
+              //  "required": true
             },
             { "id": "emCity", "title": app.data["City"], "value": "Toronto", "className": "col-xs-12 col-md-6" }
           ]
@@ -666,14 +584,12 @@ function getSubmissionSections() {
           fields: [{ "id": "emPostalCode", "title": app.data["Postal Code"], "className": "col-xs-12 col-md-6" },
           { "id": "emPrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6" },
           {
-            "id": "emFacingStreet", "title": app.data["Facing Street"],
+            "id": "emFacingStreet", "title": app.data["Facing Street"], "className": "col-xs-12 col-md-6"
             //  "required": true, 
-            "className": "col-xs-12 col-md-6"
           },
           {
-            "id": "emDescriptiveLocation", "posthelptext": app.data["DescriptiveLocationText"], "title": app.data["graffitiDesLocation"],
+            "id": "emDescriptiveLocation", "posthelptext": app.data["DescriptiveLocationText"], "title": app.data["graffitiDesLocation"], "className": "col-xs-12 col-md-6",
             "required": true,
-            "className": "col-xs-12 col-md-6"
           }
           ]
         }
@@ -688,6 +604,7 @@ function getSubmissionSections() {
           fields: [
             {
               "id": "ePermission", "title": app.data["permission"], "type": "radio", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              //    "required":true, 
               "validators": {
                 callback: {
                   message: app.data["permissionValidation"],
@@ -806,77 +723,30 @@ function getSubmissionSections() {
             },
             { "id": "DeclarationText", "title": "", "type": "html", "html": app.data["DeclarationText"], "className": "col-xs-12 col-md-12" },
             {
-              id: "actionBar",
-              type: "html",
-              html: `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtn"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button>
+              "id": "actionBar",
+              "type": "html",
+              "html": `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtn"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button>
                  <button class="btn btn-success" id="printbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print</button></div>`
             },
             {
-              id: "successFailRow",
-              type: "html",
-              className: "col-xs-12 col-md-12",
-              html: `<div id="successFailArea" className="col-xs-12 col-md-12"></div>`
+              "id": "successFailRow",
+              "type": "html",
+              "className": "col-xs-12 col-md-12",
+              "html": `<div id="successFailArea" className="col-xs-12 col-md-12"></div>`
             },
-            {
-              "id": "fid",
-              "type": "html",
-              "html": "<input type=\"text\" id=\"fid\" aria-label=\"Document ID\" aria-hidden=\"true\" name=\"fid\">",
-              "class": "hidden"
-            }, {
-              "id": "action",
-              "type": "html",
-              "html": "<input type=\"text\" id=\"action\" aria-label=\"Action\" aria-hidden=\"true\" name=\"action\">",
-              "class": "hidden"
-            }, {
-              "id": "createdBy",
-              "type": "html",
-              "html": "<input type=\"text\" id=\"createdBy\" aria-label=\"Complaint Created By\" aria-hidden=\"true\" name=\"createdBy\">",
-              "class": "hidden"
-            }, {
-              "id": "recCreated",
-              "type": "html",
-              "html": "<input type=\"text\" id=\"recCreated\" aria-label=\"Record Creation Date\" aria-hidden=\"true\" name=\"recCreated\">",
-              "class": "hidden"
-            },
-            {
-              "id": "AddressGeoID",
-              "title": app.data["Address Geo ID"],
-              "type": "html",
-              "html": "<input type=\"hidden\" aria-label=\"Address GeoID\" aria-hidden=\"true\" id=\"AddressGeoID\" name=\"AddressGeoID\">",
-              "class": "hidden"
-            },
-            {
-              "id": "AddressLongitude",
-              "title": app.data["Address Longitude"],
-              "type": "html",
-              "html": "<input type=\"hidden\" aria-label=\"Address Longitude\" aria-hidden=\"true\" id=\"AddressLongitude\" name=\"AddressLongitude\">",
-              "class": "hidden"
-            }, {
-              "id": "AddressLatitude",
-              "title": app.data["Address Latitude"],
-              "type": "html",
-              "html": "<input type=\"hidden\" aria-label=\"Address Latitude\" aria-hidden=\"true\" id=\"AddressLatitude\" name=\"AddressLatitude\">",
-              "class": "hidden"
-            },
-            {
-              "id": "MapAddress",
-              "title": app.data["Map Address"],
-              "type": "html",
-              "html": "<input type=\"hidden\" aria-label=\"MapAddress\" aria-hidden=\"true\" id=\"MapAddress\" name=\"MapAddress\">",
-              "class": "hidden"
-            },
-            {
-              "id": "ShowMap",
-              "title": app.data["ShowMap"],
-              "type": "html",
-              "html": "<input type=\"hidden\" aria-label=\"ShowMap\" aria-hidden=\"true\" id=\"ShowMap\" name=\"ShowMap\">",
-              "class": "hidden"
-            }
-
+            { "id": "fid", "type": "html", "html": "<input type=\"text\" id=\"fid\" aria-label=\"Document ID\" aria-hidden=\"true\" name=\"fid\">", "class": "hidden" },
+            { "id": "action", "type": "html", "html": "<input type=\"text\" id=\"action\" aria-label=\"Action\" aria-hidden=\"true\" name=\"action\">", "class": "hidden" },
+            { "id": "createdBy", "type": "html", "html": "<input type=\"text\" id=\"createdBy\" aria-label=\"Complaint Created By\" aria-hidden=\"true\" name=\"createdBy\">", "class": "hidden" },
+            { "id": "recCreated", "type": "html", "html": "<input type=\"text\" id=\"recCreated\" aria-label=\"Record Creation Date\" aria-hidden=\"true\" name=\"recCreated\">", "class": "hidden" },
+            { "id": "AddressGeoID", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Address Geo ID\" aria-hidden=\"true\" id=\"AddressGeoID\" name=\"AddressGeoID\">", "class": "hidden" },
+            { "id": "AddressLongitude", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Address Longitude\" aria-hidden=\"true\" id=\"AddressLongitude\" name=\"AddressLongitude\">", "class": "hidden" },
+            { "id": "AddressLatitude", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Address Latitude\" aria-hidden=\"true\" id=\"AddressLatitude\" name=\"AddressLatitude\">", "class": "hidden" },
+            { "id": "MapAddress", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Map Address\" aria-hidden=\"true\" id=\"MapAddress\" name=\"MapAddress\">", "class": "hidden" },
+            { "id": "ShowMap", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Show Map\" aria-hidden=\"true\" id=\"ShowMap\" name=\"ShowMap\">", "class": "hidden" }
           ]
         }
       ]
-    },
+    }
   ]
   return section;
 }
@@ -912,11 +782,9 @@ function getAdminSectionsBottom() {
   return section;
 }
 function setGeoParams() {
-  let queryStr = encodeURIComponent($("#emAddress").val() + " " + $("#emCity").val() + " " + $("#emPostalCode").val());
-  queryStr = "?searchString=" + queryStr + "&searchArea=1&matchType=1&projectionType=1&retRowLimit=10";
-  //setGeoParams
+  let queryStr = "?searchString=" + encodeURIComponent($("#emAddress").val() + " " + $("#emCity").val() + " " + $("#emPostalCode").val());
   $.ajax({
-    url: geoURL + queryStr, // geoURL,
+    url: config.geoURL + queryStr + config.geoParam, // geoURL,
     type: "GET",
     cache: "true",
     dataType: "json",
@@ -932,10 +800,8 @@ function setGeoParams() {
         $("#AddressLongitude").val("");
         $("#AddressLatitude").val("");
       }
-      //  console.log(resultLoc.length > 0 ? resultLoc[0]["geoId"] : "");
     },
     error: function () {
-      //  alert("Error: The application was unable to load data.")
       $("#AddressGeoID").val("");
       $("#AddressLongitude").val("");
       $("#AddressLatitude").val("");

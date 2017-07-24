@@ -18,9 +18,11 @@ callback({
                 'default_repo': 'graffiti_exemption',
                 'formName': { 'demo': 'Graffiti Exemption Form' },
                 'timeOutMsg': '<br><br><p><strong>The session will time out after 15 minutes of inactivity, please save your work.</strong></p>',
+                'geoURL': '//map.toronto.ca/geoservices/rest/search/rankedsearch',
+                'geoParam': '&searchArea=1&matchType=1&projectionType=1&retRowLimit=10',
                 'pointerType': {
                     'title': 'Pointer',
-                    choices: [{ 'text': 'Select one', 'value': '' }]
+                    'choices': [{ 'text': 'Select one', 'value': '' }]
                 },
                 'button': {
                     'submit': 'Submit',
@@ -182,7 +184,8 @@ callback({
                         'fail': 'Unable to notify! This report could not be sent to the Emergency Management Captain. Please try again.',
                         'emailFrom': 'wmDev@toronto.ca',
                         'emailSubject': 'New Graffiti Exemption Document',
-                        'emailBody': 'New Graffiti Bylaw regularisation application has been received.'
+                        'emailBody': 'New Graffiti Bylaw regularisation application has been received.',
+                        'sendNotification': true
                     },
                     'submit': {
                         'done': 'Thank you! Your request has been received.',
@@ -287,6 +290,10 @@ callback({
                 "name": "Transportation",
                 "link": "http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=e10086195a7c1410VgnVCM10000071d60f89RCRD"
             }]
+        },
+        {
+            "summary": "Open",
+            "title": "View_Edit"
         },
         {
             "summary": "Request for Regularization for Art Mural/Graffiti Art under Municipal Code Chapter 485, Graffiti",

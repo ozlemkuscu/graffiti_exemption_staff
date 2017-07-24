@@ -1,7 +1,4 @@
 const configURL = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js";
-const geoURL = "//map.toronto.ca/geoservices/rest/search/rankedsearch";
-// example
-// "https://map.toronto.ca/geoservices/rest/search/rankedsearch?searchString=55%20john%20street&searchArea=1&matchType=1&projectionType=1&retRowLimit=10"
 const mailSend = false;
 
 const app = new cot_app("Graffiti Exemption", {
@@ -158,7 +155,7 @@ function listSubmissions(status, filter, repo, target) {
     let viewParam2 = "";
     if (status == "All") {
       viewParam = config.status[status];
-    } else if (status == "Yes" || status == "Submitted" || status == "Approved") {
+    } else if (status == "Yes" || status == "Submitted" || status == "Approved" || status == "Denied" || status =="Invalid") {
       viewParam = config.status[status + 'App'];
     } else if (status == "Search") {
       viewParam = "Result";

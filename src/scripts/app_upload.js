@@ -118,6 +118,9 @@ function getDefaultThumbnail(stringType) {
       case "doc":
         thumb = "img/word.png";
         break;
+      case "msword":
+        thumb = "img/word.png";
+        break;
       case "ppt":
         thumb = "img/ppt.png";
         break;
