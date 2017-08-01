@@ -5,6 +5,7 @@ let imageDropzone = void 0;
 let docDropzone = void 0;
 let form;
 let appParam = 'graffiti_exemption';
+let DZ_remove = [];
 
 let cookie_SID = appParam + '.sid';
 let cookie_modifiedUsername = appParam + '.cot_uname';
@@ -13,27 +14,28 @@ let cookie_modifiedLastName = appParam + '.lastName';
 let cookie_modifiedEmail = appParam + '.email';
 let repo = appParam;
 
-function checkFileUploads(payload) {
+function checkFileUploads(uploads) {
   let queryString = "";
   let binLoc = "";
-  if (payload.image_uploads[0]) {
-    $.each(payload.image_uploads, function (index, item) {
-      (binLoc == "") ? binLoc = item.bin_id : binLoc = binLoc + "," + item.bin_id;
+
+  if (uploads.length > 0) {
+    $.each(uploads, function (index, item) {
+      if (binLoc == "") {
+        binLoc = item.bin_id;
+      } else {
+        binLoc = binLoc + "," + item.bin_id;
+      }
     })
   }
-  if (payload.doc_uploads[0]) {
-    $.each(payload.doc_uploads, function (index, item) {
-      (binLoc == "") ? binLoc = item.bin_id : binLoc = binLoc + "," + item.bin_id;
-    })
-  }
-  if (binLoc !== "") {
-    queryString = "&KeepFiles=" + binLoc;
-  }
+
+  if (binLoc != "") { queryString = "&keepFiles=" + binLoc };
+
   return queryString;
 }
 function saveReport(action, payload, msg, form_id, repo) {
   // $(".btn").prop('disabled', true);
 
+  let uploads = (payload.image_uploads).concat(payload.doc_uploads);
   let keepQueryString = checkFileUploads(payload);
 
   $.ajax({
@@ -60,9 +62,7 @@ function saveReport(action, payload, msg, form_id, repo) {
       case 'notify':
         if (data && data.EventMessageResponse && data.EventMessageResponse.Event && data.EventMessageResponse.Event.EventID) {
           // Email report notice to emergency management captain and incident manager/reporters
-          if (mailSend) {
-            emailNotice(data.EventMessageResponse.Event.EventID, action);
-          }
+          // if (mailSend) { emailNotice(data.EventMessageResponse.Event.EventID, action); }
         } else {
           hasher.setHash('new?alert=danger&msg=' + msg.fail + '&ts=' + new Date().getTime());
         }
@@ -93,7 +93,11 @@ function saveReport(action, payload, msg, form_id, repo) {
 function updateReport(fid, action, payload, msg, repo, formData) {
   //  $(".btn").prop('disabled', true);
 
-  let keepQueryString = checkFileUploads(formData);
+  let uploads = (formData.image_uploads).concat(formData.doc_uploads);
+  let keepQueryString = checkFileUploads(uploads);
+
+  console.log("========keepQueryString========", keepQueryString);
+  console.log("========DZ_remove========", DZ_remove);
 
   $.ajax({
     url: config.httpHost.app[httpHost] + config.api.put + repo + '/' + fid + '?sid=' + getCookie(cookie_SID) + keepQueryString,
@@ -109,20 +113,26 @@ function updateReport(fid, action, payload, msg, repo, formData) {
     switch (action) {
       case 'save':
         hasher.setHash(fid + '?alert=success&msg=' + msg.done + '&ts=' + new Date().getTime());
-        if (mailSend) { emailNotice(fid, action); }
+        // code to remove deleted attachments
+        if (DZ_remove.length > -1) {
+          $.each(DZ_remove, function (i, deleteRowURL) {
+            $.get(deleteRowURL, function (response) {
+              console.log("deleted success", deleteRowURL);
+            }).fail(function () {
+              console.log('failed', deleteRowURL);
+            });
+          })
+        }
+        DZ_remove = [];
         break;
       case 'updateAttachments':
         break;
       case 'notify':
-        // Email report notice to emergency management captain and incident manager/reporters
-        if (mailSend) { emailNotice(fid, action); }
         break;
 
       case 'submit':
       case 'approve':
       case 'reject':
-        // Email report notice to administrator, emergency management captain and incident manager/reporters
-        //emailNotice(fid, action, ['administrator', 'captain']);
         hasher.setHash(fid + '?alert=success&msg=' + msg.done + '&ts=' + new Date().getTime());
         break;
 
@@ -135,6 +145,7 @@ function updateReport(fid, action, payload, msg, repo, formData) {
   }).always(function () {
     $(".btn").removeAttr('disabled').removeClass('disabled');
   });
+
 }
 function emailNotice(fid, action) {
   let emailTo = {};
@@ -215,7 +226,6 @@ function getJSONStatus(statusVal) {
 function processForm(action, form_id, repo) {
   let fid = $("#fid").val();
   let msg, payload;
-  //  let f_data = getFormJSON(form_id);
 
   setGeoParams();
 
@@ -230,7 +240,7 @@ function processForm(action, form_id, repo) {
         'fail': 'save.fail'
       };
 
-      var payloadStatusVal = getJSONStatus($("#lsteStatus").val());
+      var payloadStatusVal = getJSONStatus($('input[name="lsteStatus"]:checked').val());
 
       payload = JSON.stringify({
         'payload': JSON.stringify(f_data),
@@ -277,12 +287,11 @@ function processForm(action, form_id, repo) {
 
       // Update report and move to Submitted state
       if (fid) {
-        var payloadStatusVal = getJSONStatus($("#lsteStatus").val());
+        var payloadStatusVal = getJSONStatus($('input[name="lsteStatus"]:checked').val());
         payload = JSON.stringify({
           'payload': JSON.stringify(f_data),
           'status': payloadStatusVal
         });
-
         updateReport(fid, action, payload, msg, repo, f_data);
       }
       // Create new report and move to Submitted state
@@ -331,6 +340,8 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
   let showAttachmentSection = false;
   let debugMode = false;
 
+  DZ_remove = [];
+
   //$(destinationSelector).empty();
   let sections = $.merge(getAdminSectionsTop(), getSubmissionSections());
 
@@ -362,6 +373,16 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
   imageDropzone = new Dropzone("div#image_dropzone", $.extend(config.admin.imageDropzoneStaff, {
     "dz_id": "image_dropzone", "fid": fid, "form_id": form_id,
     "url": config.api.upload + config.default_repo + '/' + repo,
+    "init": function () {
+      // Adding extra validation to imageDropzone field by using txtPicName field
+      // Min 1 file needs to be uploaded
+      let attFieldname = "txtPicName";
+      this
+        .on("addedfile", function (file) { validateUpload("addedfile", attFieldname, file.name); })
+        .on("success", function (file) { validateUpload("success", attFieldname, file.name); })
+        .on("removedfile", function () { validateUpload("removedFile", attFieldname, ""); })
+        .on("error", function () { validateUpload("error", attFieldname, ""); });
+    }
   }));
   //"dz_id": "admin_dropzone", "fid": fid, "form_id": form_id,
   docDropzone = new Dropzone("div#document_dropzone", $.extend(config.admin.docDropzoneStaff, {
@@ -384,14 +405,8 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
     // Set created by and modified by to current user
     $("#createdBy, #modifiedBy").val(modifiedUsername);
     var dataCreated = new Date();
-
-
-    var dataCreated = new Date();
-    // dataCreatedFormatted = moment(dataCreated).format(config.dateTimeFormat);
-    // $("#complaintCreated").val(dataCreatedFormatted);
-
     $("#recCreated").val(dataCreated);
-    $("#lsteStatus").val("New");
+    $("#lsteStatus").val(config.status.DraftApp);
 
     $("#modifiedEmail").val('{"' + modifiedName + '":"' + modifiedEmail + '"}');
   }
@@ -435,6 +450,8 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
     $(".save-action").hide();
     $("#savebtn").hide();
     $("#setbtn").hide();
+    $("#image_uploads").hide();
+    $("#doc_uploads").hide();
   } else {
     $(".edit-action").hide();
   }
@@ -459,8 +476,7 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
 }
 function initForm(data) {
 
-  // we need to call off click first to overcome multiple POST requests with event registration
-  //$(".save-action").click(function () {
+  //$("button .removeUpload").hide();
   $(".save-action").off('click').on('click', function () {
     $(".edit-action").hide();
     $("#action").val($(this).attr('id'));
@@ -477,14 +493,47 @@ function initForm(data) {
 
   $(".edit-action").off('click').on('click', function () {
     $("#" + form_id).find("input, textarea, select, button").attr('disabled', false);
+    //$("button .removeUpload").hide();
     $(".dz-hidden-input").prop("disabled", false);
     $(".dz-remove").show();
     $(".edit-action").hide();
     $(".save-action").show();
     $("#savebtn").show();
     $("#setbtn").show();
-    docMode = "";
+    $("#image_uploads").show();
+    $("#doc_uploads").show();
+    docMode = "edit";
   });
+
+  $("#closebtn").click(function () { window.close(); });
+  $("#printbtn").click(function () { window.print(); });
+  $("#setbtn").click(function () { setAddressSame(); });
+  $('input[name="eNotice"]').on('change',
+    function () {
+      var checkVal = $('input[name="eNotice"]:checked').val();
+      (checkVal == "Yes") ? $("#ComplianceDateElement .optional").first().text("") : $("#ComplianceDateElement .optional").first().text("(optional)");
+      $('#' + form_id).formValidation('revalidateField', $('#ComplianceDate'));
+    });
+  $('input[name="eMaintenance"]').on('change',
+    function () {
+      var checkVal = $('input[name="eMaintenance"]:checked').val();
+      (checkVal == "Yes") ? $("#eMaintenanceAgreementElement .optional").first().text("") : $("#eMaintenanceAgreementElement .optional").first().text("(optional)");
+      $('#' + form_id).formValidation('revalidateField', $('#eMaintenanceAgreement'));
+    });
+
+  $(".dz-hidden-input").attr("aria-hidden", "true");
+  $(".dz-hidden-input").attr("aria-label", "File Upload Control");
+
+  // manual fix for "optional" parameter on label for relaed fields
+  $("#ePermissionElement .optional").first().text("");
+  $("#eNoticeElement .optional").first().text("");
+  $("#eMaintenanceElement .optional").first().text("");
+  $("#eArtistInfoElement .optional").first().text("");
+  $("#eArtSurfaceEnhanceElement .optional").first().text("");
+  $("#eArtLocalCharacterElement .optional").first().text("");
+
+  $(".dz-hidden-input").attr("aria-hidden", "true");
+  $(".dz-hidden-input").attr("aria-label", "File Upload Control");
 
   $("#savebtn").click(function () {
     $(".edit-action").hide();
@@ -503,10 +552,7 @@ function initForm(data) {
 
   });
 
-  $("#geobtn").click(function () { setGeoParams(); });
-  $("#emailbtn").click(function () { emailNotice("1234567", "save"); });
-  $('#eNotice').on('change', function () { $('#' + form_id).formValidation('revalidateField', $('#ComplianceDate')); });
-  $('#eMaintenance').on('change', function () { $('#' + form_id).formValidation('revalidateField', $('#eMaintenanceAgreement')); });
+  $('#' + form_id).data('formValidation').addField('txtPicName', { excluded: false, validators: { notEmpty: { message: app.data["imageValidation"] } } })
 
   if (data) {
     // HIDE/SHOW FIELDS BASED ON OTHER FIELD VALUES
@@ -514,10 +560,16 @@ function initForm(data) {
     var dataCreated = new Date();
     dataCreated = moment(dataCreated).format(config.dateTimeFormat);
     $("#recCreated").val(dataCreated);
-
-    $("#lsteStatus").val("New");
+    $("#lsteStatus").val(config.status.DraftApp);
   }
 
+}
+function setAddressSame() {
+  $("#emAddress").val($("#eAddress").val());
+  $("#emCity").val($("#eCity").val());
+  $("#emPostalCode").val($("#ePostalCode").val());
+  $("#emPrimaryPhone").val($("#ePrimaryPhone").val());
+  $('#' + form_id).formValidation('revalidateField', $('#emAddress'));
 }
 function submitForm() {
   //verify user still has a session
@@ -528,32 +580,56 @@ function submitForm() {
     scroll(0, 0);
   }
 }
+function validateUpload(event, field, value) {
+  //placeholder for additional logic based on the event
+  switch (event) {
+    case "addedfile":
+      break;
+    case "success":
+      break;
+    case "removedfile":
+      break;
+    case "error":
+      console.log("custom error code")
+      $('#' + form_id).data('formValidation').updateMessage(field, 'notEmpty', app.data.uploadServerErrorMessage)
+      break;
+    default:
+  }
+  $('#' + field).val(value);
+  $('#' + form_id).data('formValidation').revalidateField(field);
+}
 function getSubmissionSections() {
+
   let section = [
     {
       id: "contactSec",
       title: app.data["Contact Details Section"],
       className: "panel-info",
       rows: [
+        // for testing purposes
+        /*
+        {fields: [
+          {
+            id: "actionBar",
+            type: "html",
+            html: `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtntemp"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button>
+                 <button class="btn btn-success" id="printbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print</button>
+                  <button class="btn btn-info" id="makePDFbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print PDF</button></div>`
+          }]},*/
         {
           fields: [
-            { "id": "eFirstName", "title": app.data["First Name"], "className": "col-xs-12 col-md-6", "required": true },
-            { "id": "eLastName", "title": app.data["Last Name"], "className": "col-xs-12 col-md-6", "required": true },
-            {
-              "id": "eAddress", "title": app.data["Address"], "className": "col-xs-12 col-md-6",
-              //  "required": true
-            },
-            { "id": "eCity", "title": app.data["City"], "value": "Toronto", "className": "col-xs-12 col-md-6" }
+            { id: "eFirstName", title: app.data["First Name"], className: "col-xs-12 col-md-6", required: true },
+            { id: "eLastName", title: app.data["Last Name"], className: "col-xs-12 col-md-6", required: true },
+            { id: "eAddress", title: app.data["Address"], className: "col-xs-12 col-md-6", required: true },
+            { id: "eCity", title: app.data["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
           ]
         },
         {
-          fields: [{ "id": "ePostalCode", "title": app.data["Postal Code"], "className": "col-xs-12 col-md-6" },
-          {
-            "id": "ePrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6"
-            //  "required": true
-          },
-          { "id": "eFax", "title": app.data["Fax"], "validationtype": "Phone", "className": "col-xs-12 col-md-6" },
-          { "id": "eEmail", "title": app.data["Email"], "validationtype": "Email", "validators": { regexp: { regexp: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/, message: 'This field must be a valid email. (###@###.####)' } }, "className": "col-xs-12 col-md-6" }
+          fields: [
+            { id: "ePostalCode", title: app.data["Postal Code"], validationtype: "PostalCode", className: "col-xs-12 col-md-6" },
+            { id: "ePrimaryPhone", title: app.data["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6", required: true },
+            { id: "eFax", title: app.data["Fax"], validationtype: "Phone", className: "col-xs-12 col-md-6" },
+            { id: "eEmail", title: app.data["Email"], validationtype: "Email", validators: { regexp: { regexp: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/, message: 'This field must be a valid email. (###@###.####)' } }, className: "col-xs-12 col-md-6" }
           ]
         }
       ]
@@ -565,32 +641,21 @@ function getSubmissionSections() {
       rows: [
         {
           fields: [
-            {
-              "id": "emSameAddress", "title": "", type: "html",
-              html: `<div className="col-xs-12 col-md-12"><button class="btn btn-info" id="setbtn"><span class="" aria-hidden="true"></span> ` + app.data["Same As Above"] + `</button></div>`
-            }
+            { id: "emSameAddress", title: "", type: "html", html: `<div className="col-xs-12 col-md-12"><button class="btn btn-info" id="setbtn"><span class="" aria-hidden="true"></span> ` + app.data["Same As Above"] + `</button></div>` }
           ]
         },
         {
           fields: [
-            {
-              "id": "emAddress", "title": app.data["Address"], "className": "col-xs-12 col-md-6"
-              //  "required": true
-            },
-            { "id": "emCity", "title": app.data["City"], "value": "Toronto", "className": "col-xs-12 col-md-6" }
+            { id: "emAddress", title: app.data["Address"], className: "col-xs-12 col-md-6", required: true },
+            { id: "emCity", title: app.data["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
           ]
         },
         {
-          fields: [{ "id": "emPostalCode", "title": app.data["Postal Code"], "className": "col-xs-12 col-md-6" },
-          { "id": "emPrimaryPhone", "title": app.data["Phone"], "validationtype": "Phone", "className": "col-xs-12 col-md-6" },
-          {
-            "id": "emFacingStreet", "title": app.data["Facing Street"], "className": "col-xs-12 col-md-6"
-            //  "required": true, 
-          },
-          {
-            "id": "emDescriptiveLocation", "posthelptext": app.data["DescriptiveLocationText"], "title": app.data["graffitiDesLocation"], "className": "col-xs-12 col-md-6",
-            "required": true,
-          }
+          fields: [
+            { id: "emPostalCode", title: app.data["Postal Code"], className: "col-xs-12 col-md-6" },
+            { id: "emPrimaryPhone", title: app.data["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6" },
+            { id: "emFacingStreet", title: app.data["Facing Street"], className: "col-xs-12 col-md-6", required: true },
+            { id: "emDescriptiveLocation", "posthelptext": app.data["DescriptiveLocationText"], title: app.data["graffitiDesLocation"], className: "col-xs-12 col-md-6", "required": true }
           ]
         }
       ]
@@ -603,9 +668,8 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              "id": "ePermission", "title": app.data["permission"], "type": "radio", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
-              //    "required":true, 
-              "validators": {
+              id: "ePermission", title: app.data["permission"], type: "radio", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              validators: {
                 callback: {
                   message: app.data["permissionValidation"],
                   callback: function (value, validator, $field) {
@@ -618,9 +682,8 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              "id": "eNotice", "title": app.data["notice"], "type": "dropdown", "value": "No", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
-              //  "required": true,
-              "validators": {
+              id: "eNotice", title: app.data["notice"], type: "radio", "value": "No", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              validators: {
                 callback: {
                   message: app.data["noticeValidation"],
                   callback: function (value, validator, $field) {
@@ -629,21 +692,24 @@ function getSubmissionSections() {
                 }
               }
             }, {
-              "id": "ComplianceDate", "title": app.data["compliance"], "type": "datetimepicker", "placeholder": config.dateFormat, "className": "col-xs-12 col-md-6", "options": { format: config.dateFormat },
-              "validators": {
+              id: "ComplianceDate", title: app.data["compliance"], type: "datetimepicker", "placeholder": config.dateFormat, className: "col-xs-12 col-md-6", "options": { format: config.dateFormat },
+              validators: {
                 callback: {
                   message: app.data["complianceValidation"],
                   // this is added to formValidation
                   callback: function (value, validator, $field) {
-                    var checkVal = $("#eNotice").val();
+                    var checkVal = $('input[name="eNotice"]:checked').val();
                     return ((checkVal !== "Yes") ? true : (value !== ''));
                   }
                 }
               }
-            }, {
-              "id": "eMaintenance", "title": app.data["maintenance"], "type": "dropdown", "value": "No", "className": "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
-              //  "type": "radio",
-              "validators": {
+            }]
+        },
+        {
+          fields: [
+            {
+              id: "eMaintenance", title: app.data["maintenance"], type: "radio", "value": "No", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              validators: {
                 callback: {
                   message: app.data["maintenanceValidation"],
                   callback: function (value, validator, $field) {
@@ -653,22 +719,20 @@ function getSubmissionSections() {
               }
             },
             {
-              "id": "eMaintenanceAgreement", "title": app.data["agreementDetails"], "className": "col-xs-12 col-md-12",
-              "validators": {
+              id: "eMaintenanceAgreement", title: app.data["agreementDetails"], className: "col-xs-12 col-md-12",
+              validators: {
                 callback: {
                   message: app.data["agreementDetailsValidation"],
-                  // this is added to formValidation
                   callback: function (value, validator, $field) {
-                    var checkVal = $("#eMaintenance").val();
+                    var checkVal = $('input[name="eMaintenance"]:checked').val();
                     return ((checkVal !== "Yes") ? true : (value !== ''));
                   }
                 }
               }
             },
             {
-              "id": "eArtistInfo", "title": app.data["artistDetails"], "className": "col-xs-12 col-md-12",
-              //  "required":true,
-              "validators": {
+              id: "eArtistInfo", title: app.data["artistDetails"], className: "col-xs-12 col-md-12",
+              validators: {
                 callback: {
                   message: app.data["artistDetailsValidation"],
                   callback: function (value, validator, $field) {
@@ -678,9 +742,8 @@ function getSubmissionSections() {
               }
             },
             {
-              "id": "eArtSurfaceEnhance", "title": app.data["enhance"], "className": "col-xs-12 col-md-12",
-              //  "required":true,
-              "validators": {
+              id: "eArtSurfaceEnhance", title: app.data["enhance"], className: "col-xs-12 col-md-12",
+              validators: {
                 callback: {
                   message: app.data["enhanceValidation"],
                   callback: function (value, validator, $field) {
@@ -690,9 +753,8 @@ function getSubmissionSections() {
               }
             },
             {
-              "id": "eArtLocalCharacter", "title": app.data["adhere"], "className": "col-xs-12 col-md-12",
-              //  "required":true,
-              "validators": {
+              id: "eArtLocalCharacter", title: app.data["adhere"], className: "col-xs-12 col-md-12",
+              validators: {
                 callback: {
                   message: app.data["adhereValidation"],
                   callback: function (value, validator, $field) {
@@ -701,7 +763,7 @@ function getSubmissionSections() {
                 }
               }
             },
-            { "id": "eAdditionalComments", "title": app.data["comments"], "className": "col-xs-12 col-md-12" },
+            { id: "eAdditionalComments", title: app.data["comments"], className: "col-xs-12 col-md-12" },
           ]
         }]
     },
@@ -712,37 +774,32 @@ function getSubmissionSections() {
       rows: [
         {
           fields: [
-            { "id": "AttachmentText", "title": "", "type": "html", "html": app.data["AttachmentText"], "className": "col-xs-12 col-md-12" },
+            { id: "AttachmentText", title: "", type: "html", html: app.data["AttachmentText"], className: "col-xs-12 col-md-12" },
             {
-              "id": "Images", "prehelptext": app.data["ImagesText"], "title": app.data["Images"], "type": "html", "aria-label": "Dropzone File Upload Control Field for Images",
-              "html": '<section aria-label="File Upload Control Field for Images" id="attachment"><div class="dropzone" id="image_dropzone" aria-label="Dropzone File Upload Control for Images Section"></div></section><input type="hidden" name="txtPicName" id="txtPicName" value="" /><section id="image_uploads"></section>', "className": "col-xs-12 col-md-12"
+              id: "Images", "prehelptext": app.data["ImagesText"], title: app.data["Images"], type: "html", "aria-label": "Dropzone File Upload Control Field for Images",
+              html: '<section aria-label="File Upload Control Field for Images" id="attachment"><div class="dropzone" id="image_dropzone" aria-label="Dropzone File Upload Control for Images Section"></div></section><input type="hidden" name="txtPicName" id="txtPicName" value="" /><section id="image_uploads"></section>', className: "col-xs-12 col-md-12"
             },
             {
-              "id": "Documents", "prehelptext": app.data["DocumentsText"], "title": app.data["Documents"], "type": "html", "aria-label": "Dropzone File Upload Control Field for Documents",
-              "html": '<section aria-label="File Upload Control Field for Documents" id="attachment"><div class="dropzone" id="document_dropzone" aria-label="Dropzone File Upload Control for Document Section"></div></section><section id="doc_uploads"></section>', "className": "col-xs-12 col-md-12"
+              id: "Documents", "prehelptext": app.data["DocumentsText"], title: app.data["Documents"], type: "html", "aria-label": "Dropzone File Upload Control Field for Documents",
+              html: '<section aria-label="File Upload Control Field for Documents" id="attachment"><div class="dropzone" id="document_dropzone" aria-label="Dropzone File Upload Control for Document Section"></div></section><section id="doc_uploads"></section>', className: "col-xs-12 col-md-12"
             },
-            { "id": "DeclarationText", "title": "", "type": "html", "html": app.data["DeclarationText"], "className": "col-xs-12 col-md-12" },
+            { id: "DeclarationText", title: "", type: "html", html: app.data["DeclarationText"], className: "col-xs-12 col-md-12" },
+            // { id: "submitHelp", title: "", type: "html", html: app.data["SubmitText"], className: "col-xs-12 col-md-12" },
             {
-              "id": "actionBar",
-              "type": "html",
-              "html": `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtn"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button>
-                 <button class="btn btn-success" id="printbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print</button></div>`
+              id: "actionBar",
+              type: "html",
+              html: `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtn"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button></div>`
             },
-            {
-              "id": "successFailRow",
-              "type": "html",
-              "className": "col-xs-12 col-md-12",
-              "html": `<div id="successFailArea" className="col-xs-12 col-md-12"></div>`
-            },
-            { "id": "fid", "type": "html", "html": "<input type=\"text\" id=\"fid\" aria-label=\"Document ID\" aria-hidden=\"true\" name=\"fid\">", "class": "hidden" },
-            { "id": "action", "type": "html", "html": "<input type=\"text\" id=\"action\" aria-label=\"Action\" aria-hidden=\"true\" name=\"action\">", "class": "hidden" },
-            { "id": "createdBy", "type": "html", "html": "<input type=\"text\" id=\"createdBy\" aria-label=\"Complaint Created By\" aria-hidden=\"true\" name=\"createdBy\">", "class": "hidden" },
-            { "id": "recCreated", "type": "html", "html": "<input type=\"text\" id=\"recCreated\" aria-label=\"Record Creation Date\" aria-hidden=\"true\" name=\"recCreated\">", "class": "hidden" },
-            { "id": "AddressGeoID", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Address Geo ID\" aria-hidden=\"true\" id=\"AddressGeoID\" name=\"AddressGeoID\">", "class": "hidden" },
-            { "id": "AddressLongitude", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Address Longitude\" aria-hidden=\"true\" id=\"AddressLongitude\" name=\"AddressLongitude\">", "class": "hidden" },
-            { "id": "AddressLatitude", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Address Latitude\" aria-hidden=\"true\" id=\"AddressLatitude\" name=\"AddressLatitude\">", "class": "hidden" },
-            { "id": "MapAddress", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Map Address\" aria-hidden=\"true\" id=\"MapAddress\" name=\"MapAddress\">", "class": "hidden" },
-            { "id": "ShowMap", "type": "html", "html": "<input type=\"hidden\" aria-label=\"Show Map\" aria-hidden=\"true\" id=\"ShowMap\" name=\"ShowMap\">", "class": "hidden" }
+            { id: "successFailRow", type: "html", className: "col-xs-12 col-md-12", html: `<div id="successFailArea" className="col-xs-12 col-md-12"></div>` },
+            { id: "fid", type: "html", html: "<input type=\"text\" id=\"fid\" aria-label=\"Document ID\" aria-hidden=\"true\" name=\"fid\">", class: "hidden" },
+            { id: "action", type: "html", html: "<input type=\"text\" id=\"action\" aria-label=\"Action\" aria-hidden=\"true\" name=\"action\">", class: "hidden" },
+            { id: "createdBy", type: "html", html: "<input type=\"text\" id=\"createdBy\" aria-label=\"Complaint Created By\" aria-hidden=\"true\" name=\"createdBy\">", class: "hidden" },
+            { id: "recCreated", type: "html", html: "<input type=\"text\" id=\"recCreated\" aria-label=\"Record Creation Date\" aria-hidden=\"true\" name=\"recCreated\">", class: "hidden" },
+            { id: "AddressGeoID", type: "html", html: "<input type=\"hidden\" aria-label=\"Address Geo ID\" aria-hidden=\"true\" id=\"AddressGeoID\" name=\"AddressGeoID\">", class: "hidden" },
+            { id: "AddressLongitude", type: "html", html: "<input type=\"hidden\" aria-label=\"Address Longitude\" aria-hidden=\"true\" id=\"AddressLongitude\" name=\"AddressLongitude\">", class: "hidden" },
+            { id: "AddressLatitude", type: "html", html: "<input type=\"hidden\" aria-label=\"Address Latitude\" aria-hidden=\"true\" id=\"AddressLatitude\" name=\"AddressLatitude\">", class: "hidden" },
+            { id: "MapAddress", type: "html", html: "<input type=\"hidden\" aria-label=\"Map Address\" aria-hidden=\"true\" id=\"MapAddress\" name=\"MapAddress\">", class: "hidden" },
+            { id: "ShowMap", type: "html", html: "<input type=\"hidden\" aria-label=\"Show Map\" aria-hidden=\"true\" id=\"ShowMap\" name=\"ShowMap\">", class: "hidden" },
           ]
         }
       ]
@@ -765,8 +822,7 @@ function getAdminSectionsTop() {
           "orientation": "horizontal",
           "choices": config.recStatus.choices,
           "class": "col-xs-12 col-md-6"
-        }
-      ]
+        }]
     }]
   }];
   return section;

@@ -151,14 +151,13 @@ callback({
                 },
                 'members': {
                     'app_g': 'G',
-                    'app_admin': 'testweb1,MLS_user,MLS_admin,okuscu,bkiri'
+                    'app_admin': 'testweb1,MLS_user,MLS_admin,okuscu,bkiri,jcorrei,jmagalh'
                 },
                 'admin_emails': {
-                    'Ozlem Kuscu Yahoo': 'ozlemkuscu@yahoo.ca',
-                    'Ozlem Kuscu Gmail': 'ozkuscu@gmail.com'
+                    'Ozlem Kuscu': 'ozlem.kuscu@toronto.ca'
                 },
                 'captain_emails': {
-                    'Ozlem Kuscu': 'ozlem.kuscu@toronto.ca'
+                 /*     'Joy Correia111': 'Joy.Correia@toronto.ca111',*/
                 },
                 'recStatus': {
                     'title': 'Status',
@@ -278,7 +277,7 @@ callback({
             "title": "Same As Above"
         },
         {
-            "summary": "Please upload minimum one image.",
+            "summary": "Please upload minimum one (1) image.",
             "title": "imageValidation"
         },
         {
@@ -422,7 +421,7 @@ callback({
             "summary": "Attachments",
             "title": "Attachments Section"
         }, {
-            "summary": "Image/s",
+            "summary": "Images",
             "title": "Images"
         }, {
             "summary": "Documents",
@@ -437,6 +436,9 @@ callback({
             "summary": "<strong>The personal information on this form is collected under the legal authority of the City of Toronto Act, 2006 s.136(c) and City of Toronto Municipal Code, Chapter 485, Graffiti.  The information will be used to locate and assess the location of the art mural/graffiti art noted in the application.  Questions about this collection can be directed to Project Lead, Graffiti Management Plan, 100 Queen Street West, 17th Floor East Tower, Toronto, Ontario M5H 2N2, 416-338-2951.</strong>",
             "title": "DeclarationText"
         }, {
+            "summary": "Please review/print your information before submitting.  Once you click submit, you won't be able to edit/print.",
+            "title": "SubmitText"
+        }, {            
             "summary": "STAFF AREA",
             "title": "Staff Area Footer"
         }, {

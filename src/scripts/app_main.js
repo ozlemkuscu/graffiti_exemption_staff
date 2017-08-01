@@ -1,5 +1,6 @@
 const configURL = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js";
-const mailSend = false;
+let form_id = "graffiti_exemption_form";
+// let mailSend;
 
 const app = new cot_app("Graffiti Exemption", {
   hasFooter: true,
@@ -15,13 +16,14 @@ let oLogin;
 let groupMemberships = [];
 
 let tab = "Yes";
-let form_id = "graffiti_exemption_form";
+
 let config;
 $(document).ready(function () {
   loadVariables();
 });
 
 function loadVariables() {
+  // Loads the config parameters from the defined config URL file  
   $.ajax({
     url: configURL,
     type: "GET",
@@ -39,17 +41,18 @@ function loadVariables() {
   });
 }
 function renderCFrame() {
-  //ADD ALL THE LINKS YOU WANT TO THE APPLICATION BREADCRUMB
+  // Renders the application
+  // mailSend = config.messages.notify.sendNotification ? config.messages.notify.sendNotification : false;
   httpHost = detectHost();
   app.setBreadcrumb(app.data["breadcrumbtrail"]);
-  //INCLUDE ANY NECCESSARY JS/CSS LIBRARIES
-  //FORMS TYPICALLY USE AT LEAST THE FOLLOWING 3 LIBRARIES
+  // Including JS/CSS libraries
   app.includeLogin = app.includeDatePicker = app.includeRangePicker = app.includeFormValidation = app.includePlaceholders = app.includeMultiSelect = true;
   app.searchContext = "INTRA";
-  //RENDER THE FINISHED PAGE AND THEN CALL A CALLBACK FUNCTION WHEN COMPLETE
+  // Rendering the finished page and call a callback function when complete
   app.render(init);
 }
 function detectHost() {
+  // Detects the host type dev/qa/prod based on the url
   switch (window.location.origin) {
     case config.httpHost.root.dev:
       return 'dev';
@@ -62,9 +65,9 @@ function detectHost() {
       return 'dev';
   }
 }
-// Page authorization based on user cookie and group permissions
-function auth() {
 
+function auth() {
+  // Page authorization based on user cookie and group permissions
   // This code is for extending cookie Expiry Time as long as the user interacts with server
   try {
     oLogin.session.expireIn(config.api.timeout);
@@ -73,14 +76,14 @@ function auth() {
   }
 
   if (!oLogin.isLoggedIn()) {
-    //  console.log("user not logged in");
+    // "user not logged in" condition;
     $("#app-content-top").empty().html(config.auth.login);
     $("#view_pane").empty();
     $("#app-content-right").show();
-    //oLogin.setUserName();
     scroll(0, 0);
     return false;
   } else if (groupMemberships.length < 1) {
+    // user is nlogged in but username is not in groupMemberships array
     $("#app-content-top").empty().html(config.auth.group);
     $("#view_pane").empty();
     $("#app-content-right").show();
@@ -155,7 +158,7 @@ function listSubmissions(status, filter, repo, target) {
     let viewParam2 = "";
     if (status == "All") {
       viewParam = config.status[status];
-    } else if (status == "Yes" || status == "Submitted" || status == "Approved" || status == "Denied" || status =="Invalid") {
+    } else if (status == "Yes" || status == "Submitted" || status == "Approved" || status == "Denied" || status == "Invalid") {
       viewParam = config.status[status + 'App'];
     } else if (status == "Search") {
       viewParam = "Result";
@@ -350,7 +353,7 @@ function viewEditPage(id, query) {
       $.getJSON(config.httpHost.app[httpHost] + config.api.get + repo + '/' + id + '?sid=' + getCookie(cookie_SID))
         .done(function (data) {
           let payload = JSON.parse(data.payload);
-          $("#viewtitle").html((data.status === 'Yes' ? 'New' : config.status[data.status + 'App']) + ' Submission: ' + payload.eFirstName + " " + payload.eLastName)+ config.timeOutMsg;
+          $("#viewtitle").html((data.status === 'Yes' ? 'New' : config.status[data.status + 'App']) + ' Submission: ' + payload.eFirstName + " " + payload.eLastName) + config.timeOutMsg;
           loadForm("#viewedit-form", payload, id, data.status, form_id, config.default_repo, data, docMode);
         })
         .fail(function (textStatus, error) {
