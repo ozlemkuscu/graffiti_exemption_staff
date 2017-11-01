@@ -4,32 +4,21 @@
  * Created by gperry2 on 03/22/2017.
  */
 function updateAttachmentStatus(DZ, bin_id, repo, status) {
-  // console.log('updateAttachmentStatus',bin_id, repo, status);
-  var deleteURL = config.api.post + 'binUtils/' + config.default_repo + '/' + bin_id + '/' + status + '?sid=' + getCookie(config.default_repo + '.sid');
-  $.get(deleteURL, function (response) {
-    if (status == 'delete') {
-      $('#' + bin_id).remove();
-      DZ.existingUploads = $.grep(DZ.existingUploads, function (e) {
-        return e.bin_id != bin_id;
-      });
-
-      var form_id = DZ.options.form_id;
-      processForm('updateAttachments', form_id, repo);
-    }
-  }).fail(function () {
-    console.log('failed');
-  });
-}
-function updateAttachmentStatusDelete(DZ, bin_id, repo, status) {
-  var deleteURL = config.api.post + 'binUtils/' + config.default_repo + '/' + bin_id + '/' + status + '?sid=' + getCookie(config.default_repo + '.sid');
-  $('#' + bin_id).remove();
-  if (bin_id) {
-    DZ_remove.push(deleteURL);
+  if (status == 'delete') {
+    var deleteURL = config.api.post + 'binUtils/' + config.default_repo + '/' + bin_id + '/' + status + '?sid=' + getCookie(config.default_repo + '.sid');
+    $('#' + bin_id).remove();
+    if (bin_id) { DZ_remove.push(deleteURL); }
+    DZ.existingUploads = $.grep(DZ.existingUploads, function (e) {
+      return e.bin_id != bin_id;
+    });
+  } else {
+    var updateURL = config.api.post + 'binUtils/' + config.default_repo + '/' + bin_id + '/' + status + '?sid=' + getCookie(config.default_repo + '.sid');
+    $.get(updateURL, function (response) {
+      //update attachments with status
+    }).fail(function () {
+      console.log('Failed to update attachments with this url parameter', updateURL);
+    });
   }
-  DZ.existingUploads = $.grep(DZ.existingUploads, function (e) {
-    return e.bin_id != bin_id;
-  });
-  var form_id = DZ.options.form_id;
 }
 function processUploads(DZ, repo, sync) {
   // console.log('processUploads',DZ.options.dz_id, repo, sync)
@@ -74,6 +63,7 @@ function showUploads(DZ, id, data, repo, allowDelete, showTable) {
     // this statement is making the array unique
     if (bin_ids.length == 0 || (bin_ids.length != 0 && ((bin_ids.indexOf(row.bin_id) > -1) == false))) {
       var getURL = config.httpHost.app[httpHost] + config.api.upload + repo + '/' + row.bin_id + '?sid=' + getCookie(config.default_repo + '.sid');
+      //console.log(getURL);
       var getLink = '<button onclick="event.preventDefault();window.open(\'' + getURL + '\')"><span class="glyphicon glyphicon-download"></span></button>';
       var deleteLink = '<button class="removeUpload" data-id="' + i + '" data-bin="' + row.bin_id + '" ><span class="glyphicon glyphicon-trash"></span></button>';
       var buttons = getLink;
@@ -85,9 +75,11 @@ function showUploads(DZ, id, data, repo, allowDelete, showTable) {
       thisDZ.on("addedfile", function (file) {
         file.getURL = getURL;
         file.caption = caption;
-        file.previewElement.addEventListener("click", function () {
-          window.open(file.getURL);
-        });
+        if (row.bin_id == file.bin_id) {
+          file.previewElement.addEventListener("click", function () {
+            window.open(file.getURL);
+          });
+        }
         //file._captionLabel = Dropzone.createElement("<p>" + file.caption + "</p>")
         //file.previewElement.appendChild(file._captionLabel);
       });
@@ -107,11 +99,11 @@ function showUploads(DZ, id, data, repo, allowDelete, showTable) {
   showTable ? $('#' + id).html(_uploads) : "";
 
   thisDZ.on("removedfile", function (file) {
-    updateAttachmentStatusDelete(thisDZ, file.bin_id, repo, 'delete');
+    updateAttachmentStatus(thisDZ, file.bin_id, repo, 'delete');
   });
   $(".removeUpload").on('click', function () {
-    event.preventDefault(); 
-    updateAttachmentStatusDelete(thisDZ, $(this).attr('data-bin'), repo, 'delete', $(this).attr('data-id'));
+    event.preventDefault();
+    updateAttachmentStatus(thisDZ, $(this).attr('data-bin'), repo, 'delete', $(this).attr('data-id'));
   });
 }
 function getDefaultThumbnail(stringType) {
@@ -120,7 +112,6 @@ function getDefaultThumbnail(stringType) {
     thumb = "img/default.png";
   } else {
     var type = stringType.indexOf("/") > -1 ? stringType.split("/")[1] : stringType;
-    // console.log("type", type);
     switch (type) {
       case "jpeg":
       case "mpeg":

@@ -1,6 +1,7 @@
-const configURL = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js";
+//const configURLC2 = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js111"; //opentext link
+const configURLC2 = "https://contrib0.wp.intra.dev-toronto.ca/app_content/graffiti_exemption_staff_config/"; //wordpress link
+const configURLC3 = "https://was-intra-sit.toronto.ca/c3api_config/v2/ConfigService.svc/ConfigSet('graffiti_exemption/JSONFeed.js')/ConfigContent"; //c3api link
 let form_id = "graffiti_exemption_form";
-// let mailSend;
 
 const app = new cot_app("Graffiti Exemption", {
   hasFooter: true,
@@ -14,37 +15,48 @@ const app = new cot_app("Graffiti Exemption", {
 let httpHost;
 let oLogin;
 let groupMemberships = [];
-
 let tab = "Yes";
 
 let config;
 $(document).ready(function () {
   loadVariables();
 });
-
 function loadVariables() {
   // Loads the config parameters from the defined config URL file  
   $.ajax({
-    url: configURL,
+    url: configURLC2,
     type: "GET",
     cache: "true",
     dataType: "jsonp",
     jsonpCallback: "callback",
     success: function (data) {
-      $.each(data.items, function (i, item) { app.data[item.title] = item.summary; });
-      config = app.data.config;
-      renderCFrame();
+      config = data;
+      renderApp();
     },
     error: function () {
-      alert("Error: The application was unable to load data.")
+      console.log(configURLC2 + " failed. Trying alternative URL for configuration : " + configURLC3);
+      $.ajax({
+        url: configURLC3,
+        type: "GET",
+        cache: "true",
+        dataType: "jsonp",
+        jsonpCallback: "callback",
+        success: function (data) {
+          config = data;
+          renderApp();
+        },
+        error: function () {
+          alert("Error: The application was unable to load data. Please contact system administrator.");
+        }
+      })
     }
-  });
+  })
 }
-function renderCFrame() {
+function renderApp() {
   // Renders the application
   // mailSend = config.messages.notify.sendNotification ? config.messages.notify.sendNotification : false;
   httpHost = detectHost();
-  app.setBreadcrumb(app.data["breadcrumbtrail"]);
+  app.setBreadcrumb(config["breadcrumbtrail"]);
   // Including JS/CSS libraries
   app.includeLogin = app.includeDatePicker = app.includeRangePicker = app.includeFormValidation = app.includePlaceholders = app.includeMultiSelect = true;
   app.searchContext = "INTRA";
@@ -65,7 +77,6 @@ function detectHost() {
       return 'dev';
   }
 }
-
 function auth() {
   // Page authorization based on user cookie and group permissions
   // This code is for extending cookie Expiry Time as long as the user interacts with server
@@ -78,9 +89,10 @@ function auth() {
   if (!oLogin.isLoggedIn()) {
     // "user not logged in" condition;
     $("#app-content-top").empty().html(config.auth.login);
-    $("#view_pane").empty();
-    $("#app-content-right").show();
+    //  $("#view_pane").empty();
+    //  $("#app-content-right").show();
     scroll(0, 0);
+    oLogin.showLogin();
     return false;
   } else if (groupMemberships.length < 1) {
     // user is nlogged in but username is not in groupMemberships array
@@ -186,23 +198,23 @@ function listSubmissions(status, filter, repo, target) {
       addFooter: true,
       dateFormat: config.dateFormatView,
       columnDefs: [
-        { "targets": 0, data: null, defaultContent: '', title: '<span class="sr-only">' + app.data["View_Edit"] + '</span>', "defaultContent": `<a class="btn-default btn-view-edit-report"><span title="View/Edit" class="glyphicon glyphicon-pencil"></span></a>` },
+        { "targets": 0, data: null, defaultContent: '', title: '<span class="sr-only">' + config["View_Edit"] + '</span>', "defaultContent": `<a class="btn-default btn-view-edit-report"><span title="View/Edit" class="glyphicon glyphicon-pencil"></span></a>` },
         { "targets": 1, data: 'lsteStatus', "title": config.recStatus.title, defaultContent: '', sortOrder: "des" },
         {
-          "targets": 2, defaultContent: '', title: app.data["Submission Date Column"], type: 'date',
+          "targets": 2, defaultContent: '', title: config["Submission Date Column"], type: 'date',
           data: function (row, type, val, meta) {
             if (row.recCreated != "") {
-              return moment(new Date(row.recCreated)).format(config.dateTimeFormat3);
+              return moment(new Date(row.recCreated)).format(config.dateTimeFormat);
             }
-            return moment(row.created).format(config.dateTimeFormat3);
+            return moment(row.created).format(config.dateTimeFormat);
           }
         },
-        { "targets": 3, data: function (row, type, val, meta) { return (row.eFirstName + " " + row.eLastName); }, defaultContent: '', title: app.data["Name"] },
-        { "targets": 4, data: 'eAddress', "title": app.data["Address"], defaultContent: '', sortOrder: "des" },
-        { "targets": 5, data: 'ePrimaryPhone', "title": app.data["Phone"], defaultContent: '', sortOrder: "des" },
-        { "targets": 6, data: 'eEmail', title: app.data["Email"], defaultContent: '', sortOrder: "des" },
-        { "targets": 7, data: 'emAddress', "title": app.data["Graffiti Address"], defaultContent: '', sortOrder: "des" },
-        { "targets": 8, data: 'AddressGeoID', title: app.data["Address Geo ID"], defaultContent: '' },
+        { "targets": 3, data: function (row, type, val, meta) { return (row.eFirstName + " " + row.eLastName); }, defaultContent: '', title: config["Name"] },
+        { "targets": 4, data: 'eAddress', "title": config["Address"], defaultContent: '', sortOrder: "des" },
+        { "targets": 5, data: 'ePrimaryPhone', "title": config["Phone"], defaultContent: '', sortOrder: "des" },
+        { "targets": 6, data: 'eEmail', title: config["Email"], defaultContent: '', sortOrder: "des" },
+        { "targets": 7, data: 'emAddress', "title": config["Graffiti Address"], defaultContent: '', sortOrder: "des" },
+        { "targets": 8, data: 'AddressGeoID', title: config["Address Geo ID"], defaultContent: '' },
         { "targets": 9, data: 'ePermission', "title": "Permission", defaultContent: '', sortOrder: "des" },
         { "targets": 10, data: 'eMaintenance', "title": "Maintenance", defaultContent: '', sortOrder: "des" }
       ]
@@ -410,7 +422,6 @@ function init() {
 
   oLogin = new cot_login({ ccRoot: config.httpHost.app[httpHost], welcomeSelector: "#app-content-right", onLogin: initFrontPage, appName: config.default_repo });
 
-
   // Create New Entry button
   $("#maincontent").on('click', '#btn-createReport', function () {
     if (auth()) {
@@ -418,18 +429,8 @@ function init() {
     }
   });
 
-  // View Submissions button
-  $("#maincontent").on('click', '#btn-viewSubmissions', function () {
-    hasher.setHash('?status=' + tab + '&ts=' + new Date().getTime());
-  });
-
   // Print button
-  $("#maincontent").on('click', '#btn-print', function () {
-    window.print();
-  });
-
-  // Export to CSV button
-  $("#maincontent").on('click', '#btn-exportCsv', function () { });
+  $("#maincontent").on('click', '#btn-print', function () { window.print(); });
 
   // Navigation tab links by report status
   $("#maincontent").on('click', '.tablink', function () {
@@ -449,6 +450,10 @@ function init() {
     hasher.setHash($(this).parents('tr').attr('data-id') + '?ts=' + new Date().getTime() + '&mode=read&repo=' + config.default_repo);
   });
 
+  // Edit button
+  $("#maincontent").on('click', '.edit-action', function () {
+    hasher.setHash($('#fid').val() + '?ts=' + new Date().getTime() + '&mode=edit&repo=' + config.default_repo);
+  });
 
   // Set action parameter value based on button clicked
   $("#maincontent").on("click", ".btn-save, .btn-notify, .btn-submit, .btn-approve, .btn-reject", function () {

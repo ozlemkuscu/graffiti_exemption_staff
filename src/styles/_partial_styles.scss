@@ -30,21 +30,15 @@ margin-top: 0px;
   font-size: 2em;
   margin: 0;
 }
-#maincontent #view_pane th{font-size: 85%;padding:3px;margin:0;}
-#maincontent #view_pane td{font-size:85%;padding:3px;margin:0;}
-#maincontent #view_pane {font-size:85%;}
-#appDisplay select.form-control {
-  height: 28px;
-}
 
 .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover {
     background-color: #337ab7 !important;
     color: #ffffff;
 }
-body {
-  font-size: 14px;
+#app-content-bottom {
+  font-size: 0.95em;
 }
 
-table {
-  font-size: 16px;
-}
+//table {
+ // font-size: 1em;
+//}

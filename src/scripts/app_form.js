@@ -33,8 +33,6 @@ function checkFileUploads(uploads) {
   return queryString;
 }
 function saveReport(action, payload, msg, form_id, repo) {
-  // $(".btn").prop('disabled', true);
-
   let uploads = (payload.image_uploads).concat(payload.doc_uploads);
   let keepQueryString = checkFileUploads(payload);
 
@@ -42,7 +40,6 @@ function saveReport(action, payload, msg, form_id, repo) {
     url: config.httpHost.app[httpHost] + config.api.post + repo + '?sid=' + getCookie(cookie_SID) + keepQueryString,
     type: 'POST',
     data: JSON.stringify(payload),
-    //   data: payload,
     headers: {
       'Content-Type': 'application/json; charset=utf-8;',
       'Cache-Control': 'no-cache'
@@ -96,9 +93,6 @@ function updateReport(fid, action, payload, msg, repo, formData) {
   let uploads = (formData.image_uploads).concat(formData.doc_uploads);
   let keepQueryString = checkFileUploads(uploads);
 
-  console.log("========keepQueryString========", keepQueryString);
-  console.log("========DZ_remove========", DZ_remove);
-
   $.ajax({
     url: config.httpHost.app[httpHost] + config.api.put + repo + '/' + fid + '?sid=' + getCookie(cookie_SID) + keepQueryString,
     type: 'POST',
@@ -109,17 +103,17 @@ function updateReport(fid, action, payload, msg, repo, formData) {
     },
     dataType: 'json'
   }).done(function (data) {
-    //  action = 'notify';
+    //  emailNotice(fid, 'notify');
     switch (action) {
       case 'save':
         hasher.setHash(fid + '?alert=success&msg=' + msg.done + '&ts=' + new Date().getTime());
         // code to remove deleted attachments
-        if (DZ_remove.length > -1) {
+        if (DZ_remove.length > 0) {
           $.each(DZ_remove, function (i, deleteRowURL) {
             $.get(deleteRowURL, function (response) {
-              console.log("deleted success", deleteRowURL);
+              //  console.log("deleted success", deleteRowURL);
             }).fail(function () {
-              console.log('failed', deleteRowURL);
+              console.log('Failed to update attachments with this url parameter', deleteRowURL);
             });
           })
         }
@@ -149,14 +143,10 @@ function updateReport(fid, action, payload, msg, repo, formData) {
 }
 function emailNotice(fid, action) {
   let emailTo = {};
-  let emailCaptain = config.captain_emails;
-  let emailAdmin = config.admin_emails;
-  if (typeof emailCaptain !== 'undefined' && emailCaptain != "") {
-    $.extend(emailTo, emailCaptain);
-  }
-  if (typeof emailAdmin !== 'undefined' && emailAdmin != "") {
-    //  $.extend(emailTo, emailAdmin);
-  }
+  let emailCaptain = config.captain_emails[httpHost];
+  let emailAdmin = config.admin_emails[httpHost];
+  (typeof emailCaptain !== 'undefined' && emailCaptain != '') ? $.extend(emailTo, emailCaptain) : '';
+  (typeof emailAdmin !== 'undefined' && emailAdmin != '') ? $.extend(emailTo, emailAdmin) : '';
 
   var emailRecipients = $.map(emailTo, function (email) {
     return email;
@@ -170,11 +160,10 @@ function emailNotice(fid, action) {
     'id': fid,
     'status': action,
     'body': (config.messages.notify.emailBody ? config.messages.notify.emailBody : 'New submission has been received.'),
-    'emailSubject': config.messages.notify.emailSubject
+    'emailSubject': (config.messages.notify.emailSubject ? config.messages.notify.emailSubject : 'New submission')
   });
-
   $.ajax({
-    url: config.httpHost.app[httpHost] + config.api.email,
+    url: config.httpHost.app_public[httpHost] + config.api_public.email,
     type: 'POST',
     data: payload,
     headers: {
@@ -184,12 +173,12 @@ function emailNotice(fid, action) {
     dataType: 'json'
   }).done(function (data, textStatus, jqXHR) {
     if (action === 'notify') {
-      hasher.setHash(fid + '?alert=success&msg=notify.done&ts=' + new Date().getTime());
+      //  hasher.setHash(fid + '?alert=success&msg=notify.done&ts=' + new Date().getTime());
     }
   }).fail(function (jqXHR, textStatus, error) {
     console.log("POST Request Failed: " + textStatus + ", " + error);
     if (action === 'notify') {
-      hasher.setHash(fid + '?alert=danger&msg=notify.fail&ts=' + new Date().getTime());
+      //  hasher.setHash(fid + '?alert=danger&msg=notify.fail&ts=' + new Date().getTime());
     }
   });
 }
@@ -342,10 +331,8 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
 
   DZ_remove = [];
 
-  //$(destinationSelector).empty();
   let sections = $.merge(getAdminSectionsTop(), getSubmissionSections());
 
-  //  form = new CotForm({
   form = new CotForm({
     id: form_id,
     title: '',
@@ -365,10 +352,7 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
 
   app.addForm(form, 'bottom');
 
-  //getSessionStorage(data);
-
   initForm(data);
-  // imageDropzone = new Dropzone("div#" + upload_selector, setupDropzone({ fid: fid, form_id: form_id, url: config.api.upload + config.default_repo + '/' + repo }));
 
   imageDropzone = new Dropzone("div#image_dropzone", $.extend(config.admin.imageDropzoneStaff, {
     "dz_id": "image_dropzone", "fid": fid, "form_id": form_id,
@@ -384,7 +368,7 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
         .on("error", function () { validateUpload("error", attFieldname, ""); });
     }
   }));
-  //"dz_id": "admin_dropzone", "fid": fid, "form_id": form_id,
+
   docDropzone = new Dropzone("div#document_dropzone", $.extend(config.admin.docDropzoneStaff, {
     "dz_id": "document_dropzone", "fid": fid, "form_id": form_id,
     "url": config.api.upload + config.default_repo + '/' + repo,
@@ -407,7 +391,6 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
     var dataCreated = new Date();
     $("#recCreated").val(dataCreated);
     $("#lsteStatus").val(config.status.DraftApp);
-
     $("#modifiedEmail").val('{"' + modifiedName + '":"' + modifiedEmail + '"}');
   }
   // View/Edit existing report
@@ -445,6 +428,7 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
   if (docMode == "read") {
     // Open the document in read-only mode
     $("#" + form_id).find("input, textarea, select, button").attr('disabled', 'disabled');
+    $("#" + form_id).find("fieldset.form-control").attr('disabled', 'disabled');
     $(".dz-hidden-input").prop("disabled", true);
     $(".dz-remove").hide();
     $(".save-action").hide();
@@ -455,28 +439,8 @@ function loadForm(destinationSelector, data, fid, status, form_id, repo, allJSON
   } else {
     $(".edit-action").hide();
   }
-
-  // New or existing Draft report
-  if (status === config.status.Draft || !status) {
-    // Remove Approve and Reject buttons
-    $("#approveReportElement, #rejectReportElement").remove();
-  }
-  // Submitted or Approved report
-  else if (status === config.status.Submitted || status === config.status.Approved) {
-
-    // Disable all fields and remove submission buttons if not administator
-    if ($.inArray(config.groups.graffiti_exemption_admin, groupMemberships) === -1) {
-      /// //    $("#" + form_id).find("input, textarea, select, button").attr('disabled', 'disabled');
-      $("#saveSubmit").remove();
-    } else {
-      $(".btn-save").html($(".btn-save").html().replace(config.button.saveReport, config.button.save));
-      $("#notifyReportElement, #submitReportElement").remove();
-    }
-  }
 }
 function initForm(data) {
-
-  //$("button .removeUpload").hide();
   $(".save-action").off('click').on('click', function () {
     $(".edit-action").hide();
     $("#action").val($(this).attr('id'));
@@ -488,6 +452,22 @@ function initForm(data) {
       }
     } else {
       $("#savebtn").hide();
+    }
+  });
+
+  $("#savebtn").click(function () {
+    $(".edit-action").hide();
+    $("#action").val($(this).attr('id'));
+    var form_fv = $('#' + form.cotForm.id).data('formValidation');
+    if (auth()) {
+      form_fv.validate();
+      if (form_fv.isValid()) {
+        submitForm();
+        scroll(0, 0);
+      }
+    } else {
+      $("#savebtn").hide();
+      scroll(0, 0);
     }
   });
 
@@ -535,34 +515,34 @@ function initForm(data) {
   $(".dz-hidden-input").attr("aria-hidden", "true");
   $(".dz-hidden-input").attr("aria-label", "File Upload Control");
 
-  $("#savebtn").click(function () {
-    $(".edit-action").hide();
-    $("#action").val($(this).attr('id'));
-    var form_fv = $('#' + form.cotForm.id).data('formValidation');
-    if (auth()) {
-      form_fv.validate();
-      if (form_fv.isValid()) {
-        submitForm();
-        scroll(0, 0);
-      }
-    } else {
-      $("#savebtn").hide();
-      scroll(0, 0);
-    }
-
-  });
-
-  $('#' + form_id).data('formValidation').addField('txtPicName', { excluded: false, validators: { notEmpty: { message: app.data["imageValidation"] } } })
+  $('#' + form_id).data('formValidation').addField('txtPicName', { excluded: false, validators: { notEmpty: { message: config["imageValidation"] } } })
 
   if (data) {
     // HIDE/SHOW FIELDS BASED ON OTHER FIELD VALUES
   } else {
     var dataCreated = new Date();
-    dataCreated = moment(dataCreated).format(config.dateTimeFormat);
     $("#recCreated").val(dataCreated);
     $("#lsteStatus").val(config.status.DraftApp);
   }
 
+  $(window).scroll(function () {
+    if ($(this).scrollTop() > 50) {
+      $("#back-to-top").fadeIn();
+    } else {
+      $("#back-to-top").fadeOut();
+    }
+  });
+
+  // Scroll to top
+  $("#back-to-top").click(function () {
+    $("#back-to-top").tooltip('hide');
+    $("html, body").animate({
+      scrollTop: 0
+    }, 'fast');
+    return false;
+  });
+
+  $("#back-to-top").tooltip('show');
 }
 function setAddressSame() {
   $("#emAddress").val($("#eAddress").val());
@@ -582,19 +562,25 @@ function submitForm() {
 }
 function validateUpload(event, field, value) {
   //placeholder for additional logic based on the event
+  let fieldVal = $('#' + field).val();
   switch (event) {
     case "addedfile":
+      // add the file name to the field value
+      fieldVal = fieldVal + value;
       break;
     case "success":
       break;
     case "removedfile":
+      // remove only the first matching file name from the field value
+      // incase the same file is added more than once
+      fieldVal = fieldVal.replace(value, '');
       break;
     case "error":
-      console.log("custom error code")
-      $('#' + form_id).data('formValidation').updateMessage(field, 'notEmpty', app.data.uploadServerErrorMessage)
+      //  $('#' + form_id).data('formValidation').updateMessage(field, 'notEmpty', config.uploadServerErrorMessage);
       break;
     default:
   }
+
   $('#' + field).val(value);
   $('#' + form_id).data('formValidation').revalidateField(field);
 }
@@ -603,77 +589,104 @@ function getSubmissionSections() {
   let section = [
     {
       id: "contactSec",
-      title: app.data["Contact Details Section"],
+      title: config["Contact Details Section"],
       className: "panel-info",
       rows: [
-        // for testing purposes
-        /*
-        {fields: [
-          {
-            id: "actionBar",
-            type: "html",
-            html: `<div className="col-xs-12 col-md-12"><button class="btn btn-success" id="savebtntemp"><span class="glyphicon glyphicon-send" aria-hidden="true"></span> ` + config.button.submitReport + `</button>
-                 <button class="btn btn-success" id="printbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print</button>
-                  <button class="btn btn-info" id="makePDFbtn"><span class="glyphicon glyphicon-print" aria-hidden="true"></span>Print PDF</button></div>`
-          }]},*/
         {
           fields: [
-            { id: "eFirstName", title: app.data["First Name"], className: "col-xs-12 col-md-6", required: true },
-            { id: "eLastName", title: app.data["Last Name"], className: "col-xs-12 col-md-6", required: true },
-            { id: "eAddress", title: app.data["Address"], className: "col-xs-12 col-md-6", required: true },
-            { id: "eCity", title: app.data["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
+            { id: "eFirstName", title: config["First Name"], className: "col-xs-12 col-md-6", required: true },
+            { id: "eLastName", title: config["Last Name"], className: "col-xs-12 col-md-6", required: true },
+            { id: "eAddress", title: config["Address"], className: "col-xs-12 col-md-6", required: true },
+            { id: "eCity", title: config["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
           ]
         },
         {
           fields: [
-            { id: "ePostalCode", title: app.data["Postal Code"], validationtype: "PostalCode", className: "col-xs-12 col-md-6" },
-            { id: "ePrimaryPhone", title: app.data["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6", required: true },
-            { id: "eFax", title: app.data["Fax"], validationtype: "Phone", className: "col-xs-12 col-md-6" },
-            { id: "eEmail", title: app.data["Email"], validationtype: "Email", validators: { regexp: { regexp: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/, message: 'This field must be a valid email. (###@###.####)' } }, className: "col-xs-12 col-md-6" }
+            {
+              id: "ePostalCode", title: config["Postal Code"], validationtype: "PostalCode", className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: "",
+                  callback: function (value, validator, $field) {
+                    if (value.toLowerCase().startsWith("m") || value.toLowerCase().startsWith("l") || value == "") {
+                      return true;
+                    }
+                    else {
+                      return false;
+                    }
+                  }
+                }
+              }
+            },
+            { id: "ePrimaryPhone", title: config["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6", required: true }
+          ]
+        }, {
+          fields: [
+            { id: "eFax", title: config["Fax"], validationtype: "Phone", className: "col-xs-12 col-md-6" },
+            { id: "eEmail", title: config["Email"], validationtype: "Email", validators: { regexp: { regexp: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/, message: 'This field must be a valid email. (###@###.####)' } }, className: "col-xs-12 col-md-6" }
           ]
         }
       ]
     },
     {
       id: "graffitiSec",
-      title: app.data["Graffiti Section"],
+      title: config["Graffiti Section"],
       className: "panel-info",
       rows: [
         {
           fields: [
-            { id: "emSameAddress", title: "", type: "html", html: `<div className="col-xs-12 col-md-12"><button class="btn btn-info" id="setbtn"><span class="" aria-hidden="true"></span> ` + app.data["Same As Above"] + `</button></div>` }
+            { id: "emSameAddress", title: "", type: "html", html: `<div className="col-xs-12 col-md-12"><button class="btn btn-info" id="setbtn"><span class="" aria-hidden="true"></span> ` + config["Same As Above"] + `</button></div>` }
           ]
         },
         {
           fields: [
-            { id: "emAddress", title: app.data["Address"], className: "col-xs-12 col-md-6", required: true },
-            { id: "emCity", title: app.data["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
+            { id: "emAddress", title: config["Address"], className: "col-xs-12 col-md-6", required: true },
+            { id: "emCity", title: config["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
           ]
         },
         {
           fields: [
-            { id: "emPostalCode", title: app.data["Postal Code"], className: "col-xs-12 col-md-6" },
-            { id: "emPrimaryPhone", title: app.data["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6" },
-            { id: "emFacingStreet", title: app.data["Facing Street"], className: "col-xs-12 col-md-6", required: true },
-            { id: "emDescriptiveLocation", "posthelptext": app.data["DescriptiveLocationText"], title: app.data["graffitiDesLocation"], className: "col-xs-12 col-md-6", "required": true }
+            {
+              id: "emPostalCode", title: config["Postal Code"], validationtype: "PostalCode", className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: "",
+                  callback: function (value, validator, $field) {
+                    if (value.toLowerCase().startsWith("m") || value.toLowerCase().startsWith("l") || value == "") {
+                      return true;
+                    }
+                    else {
+                      return false;
+                    }
+                  }
+                }
+              }
+            },
+            { id: "emPrimaryPhone", title: config["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6" }
+          ]
+        }, {
+          fields: [
+            { id: "emFacingStreet", title: config["Facing Street"], className: "col-xs-12 col-md-6", required: true },
+            { id: "emDescriptiveLocation", "posthelptext": config["DescriptiveLocationText"], title: config["graffitiDesLocation"], className: "col-xs-12 col-md-6", "required": true }
           ]
         }
       ]
     },
     {
       id: "detailsSec",
-      title: app.data["Details Section"],
+      title: config["Details Section"],
       className: "panel-info",
       rows: [
         {
           fields: [
             {
-              id: "ePermission", title: app.data["permission"], type: "radio", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              id: "ePermission", title: config["permission"], type: "radio", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
               validators: {
                 callback: {
-                  message: app.data["permissionValidation"],
+                  message: config["permissionValidation"],
                   callback: function (value, validator, $field) {
-                    return ($field[0].checked);
+                    var checkVal = $('input[name="ePermission"]:checked').val();
+                    return ((checkVal == undefined) ? false : true);
                   }
                 }
               }
@@ -682,20 +695,21 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              id: "eNotice", title: app.data["notice"], type: "radio", "value": "No", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              id: "eNotice", title: config["notice"], type: "radio", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
               validators: {
                 callback: {
-                  message: app.data["noticeValidation"],
+                  message: config["noticeValidation"],
                   callback: function (value, validator, $field) {
-                    return ((value == "") ? false : true);
+                    var checkVal = $('input[name="eNotice"]:checked').val();
+                    return ((checkVal == undefined) ? false : true);
                   }
                 }
               }
             }, {
-              id: "ComplianceDate", title: app.data["compliance"], type: "datetimepicker", "placeholder": config.dateFormat, className: "col-xs-12 col-md-6", "options": { format: config.dateFormat },
+              id: "ComplianceDate", title: config["compliance"], type: "datetimepicker", "placeholder": config.dateFormat, className: "col-xs-12 col-md-6", "options": { format: config.dateFormat },
               validators: {
                 callback: {
-                  message: app.data["complianceValidation"],
+                  message: config["complianceValidation"],
                   // this is added to formValidation
                   callback: function (value, validator, $field) {
                     var checkVal = $('input[name="eNotice"]:checked').val();
@@ -708,21 +722,22 @@ function getSubmissionSections() {
         {
           fields: [
             {
-              id: "eMaintenance", title: app.data["maintenance"], type: "radio", "value": "No", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
+              id: "eMaintenance", title: config["maintenance"], type: "radio", className: "col-xs-12 col-md-6", "choices": config.choices.yesNoFull, "orientation": "horizontal",
               validators: {
                 callback: {
-                  message: app.data["maintenanceValidation"],
+                  message: config["maintenanceValidation"],
                   callback: function (value, validator, $field) {
-                    return ((value == "") ? false : true);
+                    var checkVal = $('input[name="eMaintenance"]:checked').val();
+                    return ((checkVal == undefined) ? false : true);
                   }
                 }
               }
             },
             {
-              id: "eMaintenanceAgreement", title: app.data["agreementDetails"], className: "col-xs-12 col-md-12",
+              id: "eMaintenanceAgreement", title: config["agreementDetails"], type: "textarea", className: "col-xs-12 col-md-12",
               validators: {
                 callback: {
-                  message: app.data["agreementDetailsValidation"],
+                  message: config["agreementDetailsValidation"],
                   callback: function (value, validator, $field) {
                     var checkVal = $('input[name="eMaintenance"]:checked').val();
                     return ((checkVal !== "Yes") ? true : (value !== ''));
@@ -731,10 +746,10 @@ function getSubmissionSections() {
               }
             },
             {
-              id: "eArtistInfo", title: app.data["artistDetails"], className: "col-xs-12 col-md-12",
+              id: "eArtistInfo", title: config["artistDetails"], type: "textarea", className: "col-xs-12 col-md-12",
               validators: {
                 callback: {
-                  message: app.data["artistDetailsValidation"],
+                  message: config["artistDetailsValidation"],
                   callback: function (value, validator, $field) {
                     return ((value == "") ? false : true);
                   }
@@ -742,10 +757,10 @@ function getSubmissionSections() {
               }
             },
             {
-              id: "eArtSurfaceEnhance", title: app.data["enhance"], className: "col-xs-12 col-md-12",
+              id: "eArtSurfaceEnhance", title: config["enhance"], type: "textarea", className: "col-xs-12 col-md-12",
               validators: {
                 callback: {
-                  message: app.data["enhanceValidation"],
+                  message: config["enhanceValidation"],
                   callback: function (value, validator, $field) {
                     return ((value == "") ? false : true);
                   }
@@ -753,38 +768,38 @@ function getSubmissionSections() {
               }
             },
             {
-              id: "eArtLocalCharacter", title: app.data["adhere"], className: "col-xs-12 col-md-12",
+              id: "eArtLocalCharacter", title: config["adhere"], type: "textarea", className: "col-xs-12 col-md-12",
               validators: {
                 callback: {
-                  message: app.data["adhereValidation"],
+                  message: config["adhereValidation"],
                   callback: function (value, validator, $field) {
                     return ((value == "") ? false : true);
                   }
                 }
               }
             },
-            { id: "eAdditionalComments", title: app.data["comments"], className: "col-xs-12 col-md-12" },
+            { id: "eAdditionalComments", title: config["comments"], type: "textarea", className: "col-xs-12 col-md-12" },
           ]
         }]
     },
     {
       id: "attSec",
-      title: app.data["Attachments Section"],
+      title: config["Attachments Section"],
       className: "panel-info",
       rows: [
         {
           fields: [
-            { id: "AttachmentText", title: "", type: "html", html: app.data["AttachmentText"], className: "col-xs-12 col-md-12" },
+            { id: "AttachmentText", title: "", type: "html", html: config["AttachmentText"], className: "col-xs-12 col-md-12" },
             {
-              id: "Images", "prehelptext": app.data["ImagesText"], title: app.data["Images"], type: "html", "aria-label": "Dropzone File Upload Control Field for Images",
-              html: '<section aria-label="File Upload Control Field for Images" id="attachment"><div class="dropzone" id="image_dropzone" aria-label="Dropzone File Upload Control for Images Section"></div></section><input type="hidden" name="txtPicName" id="txtPicName" value="" /><section id="image_uploads"></section>', className: "col-xs-12 col-md-12"
+              id: "Images", "prehelptext": config["ImagesText"], title: config["Images"], type: "html", "aria-label": "Dropzone File Upload Control Field for Images",
+              html: '<section aria-label="File Upload Control Field for Images" id="image_attachments"><div class="dropzone" id="image_dropzone" aria-label="Dropzone File Upload Control for Images Section"></div></section><input type="hidden" name="txtPicName" id="txtPicName" value="" /><section id="image_uploads"></section>', className: "col-xs-12 col-md-12"
             },
             {
-              id: "Documents", "prehelptext": app.data["DocumentsText"], title: app.data["Documents"], type: "html", "aria-label": "Dropzone File Upload Control Field for Documents",
-              html: '<section aria-label="File Upload Control Field for Documents" id="attachment"><div class="dropzone" id="document_dropzone" aria-label="Dropzone File Upload Control for Document Section"></div></section><section id="doc_uploads"></section>', className: "col-xs-12 col-md-12"
+              id: "Documents", "prehelptext": config["DocumentsText"], title: config["Documents"], type: "html", "aria-label": "Dropzone File Upload Control Field for Documents",
+              html: '<section aria-label="File Upload Control Field for Documents" id="doc_attachments"><div class="dropzone" id="document_dropzone" aria-label="Dropzone File Upload Control for Document Section"></div></section><section id="doc_uploads"></section>', className: "col-xs-12 col-md-12"
             },
-            { id: "DeclarationText", title: "", type: "html", html: app.data["DeclarationText"], className: "col-xs-12 col-md-12" },
-            // { id: "submitHelp", title: "", type: "html", html: app.data["SubmitText"], className: "col-xs-12 col-md-12" },
+            { id: "DeclarationText", title: "", type: "html", html: config["DeclarationText"], className: "col-xs-12 col-md-12" },
+            // { id: "submitHelp", title: "", type: "html", html: config["SubmitText"], className: "col-xs-12 col-md-12" },
             {
               id: "actionBar",
               type: "html",
@@ -810,7 +825,7 @@ function getSubmissionSections() {
 function getAdminSectionsTop() {
   var section = [{
     id: "adminSec",
-    title: app.data["Admin Section"],
+    title: config["Admin Section"],
     className: "panel-info",
     rows: [{
       fields: [

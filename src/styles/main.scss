@@ -7919,7 +7919,7 @@ html {
 }
 body {
 	font-family: Roboto,Helvetica Neue,Helvetica,Arial,sans-serif !important;
-	font-size: 16px;
+  font-size: 16px;
 	line-height: 1.42857;
 	color: black;
 	background-color: #fff
@@ -8785,8 +8785,10 @@ tbody,
   cursor: pointer;
   display: none;
   position: fixed;
-  bottom: 75px;
-  right: 25px;
+  bottom: 20px;
+  right: 20px;
+//  bottom: 75px;
+//  right: 25px;
   z-index: 9999;
 }
 
@@ -11209,9 +11211,9 @@ margin-top: 0px;
   font-size: 2em;
   margin: 0;
 }
-#maincontent #view_pane th{font-size: 75%;padding:3px;margin:0;}
-#maincontent #view_pane td{font-size:75%;padding:3px;margin:0;}
-#maincontent #view_pane {font-size:85%;}
+#maincontent #view_pane th{font-size: 90%;padding:3px;margin:0;}
+#maincontent #view_pane td{font-size:90%;padding:3px;margin:0;}
+#maincontent #view_pane {font-size:90%;}
 #appDisplay select.form-control {
   height: 28px;
 }
@@ -11219,12 +11221,4 @@ margin-top: 0px;
 .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover {
     background-color: #337ab7 !important;
     color: #ffffff;
-}
-
-body {
-  font-size: 14px;
-}
-
-table {
-  font-size: 16px;
 }
