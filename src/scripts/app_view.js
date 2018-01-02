@@ -75,16 +75,18 @@ var cc_retrieve_view = function () {
       var cols = this.getColumns();
       var listHTML = '<table style="width:100%;" id="' + unid + '" >';
       listHTML += '<thead><tr>' + cols + '</tr></thead>';
+      listHTML += '<tbody></tbody>';
       listHTML += this.addFooter ? '<tfoot><tr>' + cols + '</tr></tfoot>' : '';
       listHTML += '</table>';
       var dateFormat = this.dateFormat;
       this.target.empty().html(listHTML);
       this.dt = $("#" + unid).DataTable({
       //  'search': { 'caseInsensitive': true },
-        'scrollX': _this.addScroll, // USED FOR HPRIZONTAL SCROLL BAR
+      //  'scrollX': _this.addScroll, // USED FOR HPRIZONTAL SCROLL BAR
         'bAutoWidth': _this.addScroll,
         order: this.getColumnSortOrder(),
-        dom: "<'row'<'col-sm-3'i><'col-sm-3'l><'col-sm-6'p>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'hidden'B><'col-sm-7'f>>",
+      //  dom: "<'row'<'col-sm-3'i><'col-sm-3'l><'col-sm-6'p>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'hidden'B><'col-sm-7'f>>",
+        dom: "<'row'<'col-sm-3'i><'col-sm-3'l><'col-sm-6'p>>" + "<'row'<'table-responsive'<'col-sm-12'tr>>>" + "<'row'<'hidden'B><'col-sm-7'f>>",
         buttons: ['pdfHtml5', 'csvHtml5', 'copyHtml5', 'excelHtml5'],
         'deferRender': true,
         'ajax': {

@@ -505,6 +505,11 @@ function initForm(data) {
   $(".dz-hidden-input").attr("aria-label", "File Upload Control");
 
   // manual fix for "optional" parameter on label for relaed fields
+  $("#eFirstNameElement .optional").first().text("");
+  $("#eLastNameElement .optional").first().text("");
+  $("#eAddressElement .optional").first().text("");
+  $("#ePrimaryPhoneElement .optional").first().text("");
+  $("#emAddressElement .optional").first().text("");
   $("#ePermissionElement .optional").first().text("");
   $("#eNoticeElement .optional").first().text("");
   $("#eMaintenanceElement .optional").first().text("");
@@ -594,10 +599,44 @@ function getSubmissionSections() {
       rows: [
         {
           fields: [
-            { id: "eFirstName", title: config["First Name"], className: "col-xs-12 col-md-6", required: true },
-            { id: "eLastName", title: config["Last Name"], className: "col-xs-12 col-md-6", required: true },
-            { id: "eAddress", title: config["Address"], className: "col-xs-12 col-md-6", required: true },
-            { id: "eCity", title: config["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
+            {
+              id: "eFirstName", "bindTo": "eFirstName", title: config["First Name"], className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: config["eFirstNameValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
+            },
+            {
+              id: "eLastName", "bindTo": "eLastName", title: config["Last Name"], className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: config["eLastNameValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          fields: [
+            {
+              id: "eAddress", "bindTo": "eAddress", title: config["Address"], className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: config["eAddressValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
+            },
+            { id: "eCity", "bindTo": "eCity", title: config["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
           ]
         },
         {
@@ -618,8 +657,17 @@ function getSubmissionSections() {
                 }
               }
             },
-            { id: "ePrimaryPhone", title: config["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6", required: true }
-          ]
+            {
+              id: "ePrimaryPhone", "bindTo": "ePrimaryPhone", title: config["Phone"], validationtype: "Phone", className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: config["ePrimaryPhoneValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
+            }]
         }, {
           fields: [
             { id: "eFax", title: config["Fax"], validationtype: "Phone", className: "col-xs-12 col-md-6" },
@@ -640,7 +688,17 @@ function getSubmissionSections() {
         },
         {
           fields: [
-            { id: "emAddress", title: config["Address"], className: "col-xs-12 col-md-6", required: true },
+            {
+              id: "emAddress", "bindTo": "emAddress", title: config["Address"], className: "col-xs-12 col-md-6",
+              validators: {
+                callback: {
+                  message: config["emAddressValidation"],
+                  callback: function (value, validator, $field) {
+                    return ((value == "") ? false : true);
+                  }
+                }
+              }
+            },
             { id: "emCity", title: config["City"], value: "Toronto", className: "col-xs-12 col-md-6" }
           ]
         },

@@ -1,6 +1,7 @@
-//const configURLC2 = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js111"; //opentext link
-const configURLC2 = "https://contrib0.wp.intra.dev-toronto.ca/app_content/graffiti_exemption_staff_config/"; //wordpress link
-const configURLC3 = "https://was-intra-sit.toronto.ca/c3api_config/v2/ConfigService.svc/ConfigSet('graffiti_exemption/JSONFeed.js')/ConfigContent"; //c3api link
+//const configURLC2 = "//www1.toronto.ca/static_files/WebApps/CommonComponents/graffiti_exemption/JSONFeed.js"; //opentext link
+const configURLC2 = "https://www.toronto.ca/app_content/graffiti_exemption_staff_config/"; //wordpress link
+const configURLC3 = "https://contrib0.wp.intra.qa-toronto.ca/app_content/graffiti_exemption_staff_config/"; //wordpress link
+//const configURLC3 = "https://was-intra-sit.toronto.ca/c3api_config/v2/ConfigService.svc/ConfigSet('graffiti_exemption/JSONFeed.js')/ConfigContent"; //c3api link
 let form_id = "graffiti_exemption_form";
 
 const app = new cot_app("Graffiti Exemption", {
@@ -56,6 +57,7 @@ function renderApp() {
   // Renders the application
   // mailSend = config.messages.notify.sendNotification ? config.messages.notify.sendNotification : false;
   httpHost = detectHost();
+
   app.setBreadcrumb(config["breadcrumbtrail"]);
   // Including JS/CSS libraries
   app.includeLogin = app.includeDatePicker = app.includeRangePicker = app.includeFormValidation = app.includePlaceholders = app.includeMultiSelect = true;
@@ -198,7 +200,7 @@ function listSubmissions(status, filter, repo, target) {
       addFooter: true,
       dateFormat: config.dateFormatView,
       columnDefs: [
-        { "targets": 0, data: null, defaultContent: '', title: '<span class="sr-only">' + config["View_Edit"] + '</span>', "defaultContent": `<a class="btn-default btn-view-edit-report"><span title="View/Edit" class="glyphicon glyphicon-pencil"></span></a>` },
+        { "targets": 0, data: null, defaultContent: '', title: '<span class="sr-only">' + config["View_Edit"] + '</span>', "defaultContent": `<button class="btn-default btn-view-edit-report"><span title="View/Edit" class="glyphicon glyphicon-pencil"></span></button>` },
         { "targets": 1, data: 'lsteStatus', "title": config.recStatus.title, defaultContent: '', sortOrder: "des" },
         {
           "targets": 2, defaultContent: '', title: config["Submission Date Column"], type: 'date',

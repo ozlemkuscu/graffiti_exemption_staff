@@ -1,6 +1,42 @@
-{"type":"object","$schema": "http://json-schema.org/draft-04/schema",
-   "properties":{
-     "field": {"type": "string"},
-     "field2": {"type": "string"}
-  },"required": ["field"]
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "properties": {
+     "fid": {"type": "string"},
+     "lsteStatus": {"type": "string"},
+     "action": {"type": "string"},
+     "createdBy": {"type": "string"},
+     "recCreated": {"type": "string"},
+     "eFirstName": {"type": "string"},
+     "eLastName": {"type": "string"},
+     "eAddress": {"type": "string"},
+     "eCity": {"type": "string"},
+     "ePostalCode": {"type": "string"},
+     "ePrimaryPhone": {"type": "string"},
+     "eFax": {"type": "string"},
+     "eEmail": {"type": "string"},
+     "emAddress": {"type": "string"},
+     "emCity": {"type": "string"},
+     "emPostalCode": {"type": "string"},
+     "emPrimaryPhone": {"type": "string"},
+     "emFacingStreet": {"type": "string"},
+     "emDescriptiveLocation": {"type": "string"},
+     "ePermission": {"type": "string"},
+     "eNotice": {"type": "string"},
+     "ComplianceDate": {"type": "string"},
+     "eMaintenance": {"type": "string"},
+     "eMaintenanceAgreement": {"type": "string"},
+     "eArtistInfo": {"type": "string"},
+     "eArtSurfaceEnhance": {"type": "string"},
+     "eArtLocalCharacter": {"type": "string"},
+     "eAdditionalComments": {"type": "string"},
+     "Images": {"type": "string"},
+     "Documents": {"type": "string"},
+     "AddressGeoID": {"type": "string"},
+     "AddressLongitude": {"type": "string"},
+     "AddressLatitude": {"type": "string"},
+     "MapAddress": {"type": "string"},
+     "ShowMap": {"type": "string"}
+  },
+  "required": ["eFirstName"]
 }

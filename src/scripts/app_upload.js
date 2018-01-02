@@ -106,6 +106,7 @@ function showUploads(DZ, id, data, repo, allowDelete, showTable) {
     updateAttachmentStatus(thisDZ, $(this).attr('data-bin'), repo, 'delete', $(this).attr('data-id'));
   });
 }
+
 function getDefaultThumbnail(stringType) {
   var thumb = "";
   if (typeof stringType == 'undefined') {
